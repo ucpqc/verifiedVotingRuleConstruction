@@ -24,12 +24,12 @@ fun getLosers::"('a, 'b) pre_digraph \<Rightarrow> 'a set" where
 fun getDeferred::"('a, 'b) pre_digraph \<Rightarrow> 'a set" where
 "getDeferred G = {v::'a. v\<in>verts G \<and> v\<notin>getWinners G \<and> v\<notin>getLosers G}"
 
-fun evaluateGraph::"('a,'b) Graph_Winner_Finder" where
+fun evaluateGraph::"('a,('a*'a)) Graph_Winner_Finder" where
 "evaluateGraph G = (getWinners G,getLosers G, getDeferred G)"
 
 value "evaluateGraph \<lparr> verts={0::nat,1::nat,2::nat},arcs={(0,1),(1,2)}, tail = fst, head = snd \<rparr>"
 
-lemma validResult:"\<forall>G::('a, 'b) pre_digraph.(well_formed (verts G) (evaluateGraph G))"
+lemma validResult:"\<forall>G::('a,('a*'a)) pre_digraph.(well_formed (verts G) (evaluateGraph G))"
   by auto
   
 

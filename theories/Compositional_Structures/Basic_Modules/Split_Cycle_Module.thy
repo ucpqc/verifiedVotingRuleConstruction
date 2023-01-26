@@ -35,13 +35,17 @@ fun split_cycle_first_round::"'a Electoral_Module" where
 "split_cycle_first_round a p = evaluateGraph(createMarginGraph a p mgWeight)"
 
 fun split_cycle_second_round::"'a Electoral_Module" where
-"split_cycle_second_round a p = evaluateGraph( resolveAllCycles (createMarginGraph a p mgWeight))"
+"split_cycle_second_round a p = evaluateGraph( resolveAllCycles 
+(createMarginGraph a p mgWeight) mgWeight p)"
+
 
 fun rejectAll :: "'a Electoral_Module" where
 "rejectAll a p = ({},a,{})"
 
-fun split_cycle_complete::"'a Electoral_Module" where
-"split_cycle_complete a p = ((split_cycle_first_round \<triangleright> split_cycle_second_round) \<triangleright> rejectAll) a p"
+function (sequential) split_cycle_complete::"'a Electoral_Module" where
+"split_cycle_complete a p = ((split_cycle_first_round \<triangleright> 
+split_cycle_second_round) \<triangleright> rejectAll) a p"
+  by pat_completeness auto
 
 
 fun testProfile::"candidates \<Rightarrow> candidates \<Rightarrow> candidates \<Rightarrow> candidates Profile" where 
@@ -123,10 +127,10 @@ export_code split_cycle_first_round in Haskell
 module_name SplitCycle file_prefix example
 
 lemma "split_cycle_first_round {A,B,C} [{(A,A),(B,B),(C,C),(A,B),(B,C),(A,C)}] =({A},{C},{B})"
-  by auto
+  
 
 lemma "split_cycle_first_round {A,B,C} [{(A,A),(B,B),(C,C),(A,B),(B,C),(A,C)},{(A,A),(B,B),(C,C),(A,B),(B,C),(A,C)}] =({A},{C},{B})"
-  by auto
+  
 
   
 
