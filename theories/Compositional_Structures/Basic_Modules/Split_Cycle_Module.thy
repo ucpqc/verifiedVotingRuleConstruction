@@ -15,11 +15,9 @@ text\<open>
 
 datatype candidates = A|B|C|D
 
-(*WITHOUT LIMIT_PROFILE*)
-
 fun mgWeight::"'a Weight_Function" where
-"mgWeight cand P arc = (prefer_count (P) (snd arc) (fst arc)) 
-- (prefer_count (P) (fst arc) (snd arc)) "
+"mgWeight cand P arc = (prefer_count (limit_profile cand P) (snd arc) (fst arc)) 
+- (prefer_count (limit_profile cand P) (fst arc) (snd arc)) "
 
 subsection \<open>First Round\<close>
 
@@ -42,11 +40,9 @@ fun split_cycle_second_round::"'a Electoral_Module" where
 fun rejectAll :: "'a Electoral_Module" where
 "rejectAll a p = ({},a,{})"
 
-function (sequential) split_cycle_complete::"'a Electoral_Module" where
-"split_cycle_complete a p = ((split_cycle_first_round \<triangleright> 
-split_cycle_second_round) \<triangleright> rejectAll) a p"
-  by pat_completeness auto
-
+function split_cycle_complete::"'a Electoral_Module" where
+"split_cycle_complete a p = elector(split_cycle_first_round \<triangleright> 
+split_cycle_second_round) a p"
 
 fun testProfile::"candidates \<Rightarrow> candidates \<Rightarrow> candidates \<Rightarrow> candidates Profile" where 
 "testProfile A B C =  [{(A,A),(B,B),(C,C),(A,B),(B,C),(A,C)}]"|
@@ -123,7 +119,7 @@ lemma "evaluateGraph \<lparr>verts = {A,B,C}, arcs = {(A,B),(B,C),(A,C)},tail=fs
 
 (*Haskell, SML, Scala, OCaml*)
 
-export_code split_cycle_first_round in Haskell
+export_code split_cycle_second_round in Scala
 module_name SplitCycle file_prefix example
 
 lemma "split_cycle_first_round {A,B,C} [{(A,A),(B,B),(C,C),(A,B),(B,C),(A,C)}] =({A},{C},{B})"

@@ -1,37 +1,37 @@
-(*  File:       Elect_Module.thy
+(*  File:       Reject_Module.thy
     Copyright   2021  Karlsruhe Institute of Technology (KIT)
 *)
 \<^marker>\<open>creator "Karsten Diekhoff, Karlsruhe Institute of Technology (KIT)"\<close>
 \<^marker>\<open>contributor "Jonas Kraemer, Karlsruhe Institute of Technology (KIT)"\<close>
 \<^marker>\<open>contributor "Michael Kirsten, Karlsruhe Institute of Technology (KIT)"\<close>
 
-section \<open>Elect Module\<close>
+section \<open>Reject Module\<close>
 
-theory Elect_Module
+theory Reject_Module
   imports "Component_Types/Electoral_Module"
 beginCollectD assms cycleExists.elims(2) ex_in_conv getCyclicalWalks.simps getSingleCycle.elims)
 
 text \<open>
-  The elect module is not concerned about the voter's ballots, and
-  just elects all alternatives. It is primarily used in sequence after
+  The reject module is not concerned about the voter's ballots, and
+  just rejects all alternatives. It is primarily used in sequence after
   an electoral module that only defers alternatives to finalize the decision,
   thereby inducing a proper voting rule in the social choice sense.
 \<close>
 
 subsection \<open>Definition\<close>
 
-fun elect_module :: "'a Electoral_Module" where
-  "elect_module A p = (A, {}, {})"
+fun reject_module :: "'a Electoral_Module" where
+  "reject_module A p = ({}, A, {})"
 
 subsection \<open>Soundness\<close>
 
-theorem elect_mod_sound[simp]: "electoral_module elect_module"
+theorem elect_mod_sound[simp]: "electoral_module reject_module"
   unfolding electoral_module_def
   by simp
 
-subsection \<open>Electing\<close>
+subsection \<open>Rejecting\<close>
 
-theorem elect_mod_electing[simp]: "electing elect_module"
+theorem elect_mod_rejecting[simp]: "rejecting reject_module"
   unfolding electing_def
   by simp
 

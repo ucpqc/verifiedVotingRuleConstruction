@@ -805,6 +805,14 @@ next
     by metis
 qed
 
+subsection \<open>Rejecting\<close>
+
+definition rejecting :: "'a Electoral_Module \<Rightarrow> bool" where
+  "rejecting m \<equiv>
+    electoral_module m \<and>
+      (\<forall> A p. (A \<noteq> {} \<and> finite_profile A p) \<longrightarrow> reject m A p \<noteq> {})"
+
+
 subsection \<open>Properties\<close>
 
 text \<open>
