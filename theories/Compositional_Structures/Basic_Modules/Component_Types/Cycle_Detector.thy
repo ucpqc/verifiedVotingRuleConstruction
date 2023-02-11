@@ -13,7 +13,7 @@ type_synonym ('a, 'b) Cycle_Detector = "('a, 'b) pre_digraph \<Rightarrow> bool"
 
 
 fun legitPath ::"('a, 'b) pre_digraph \<Rightarrow> 'b awalk \<Rightarrow> bool" where
-"legitPath G [] = False" |
+"legitPath G [] = True" |
 "legitPath G [e] = (e\<in>(arcs G) \<and> head G e \<noteq> tail G e)" |
 "legitPath G (e # (f # es))= (e\<in>(arcs G) \<and> head G e \<noteq> tail G e \<and> (head G e) =
  (tail G f)\<and> legitPath G (f#es))"
@@ -25,14 +25,12 @@ fun getCyclicalWalks::"('a, 'b) pre_digraph \<Rightarrow> 'b awalk set" where
 fun cycleExists::"('a, 'b) Cycle_Detector" where
 "cycleExists G = (getCyclicalWalks G  \<noteq> {})"
 
-lemma "legitPath G [a] \<longrightarrow> a \<in> arcs G"
-  by auto
 
-lemma first_in_arc[simp]:"legitPath G (e # es) \<longrightarrow> e\<in>arcs G"
+lemma first_in_arc:"legitPath G (e # es) \<longrightarrow> e\<in>arcs G"
   using legitPath.elims(2) by blast
-  
+ 
 
-lemma head_of_legit_path_legit[simp]: 
+lemma head_of_legit_path_legit: 
   assumes isLegit:"legitPath G (Cons a b)"
   shows "legitPath G [a]"
 proof -
@@ -41,28 +39,56 @@ proof -
   proof -
     obtain bb :: "'b list \<Rightarrow> 'b" and bbs :: "'b list \<Rightarrow> 'b list" where
       "\<forall>bs. bs = bb bs # bbs bs \<or> bs = []"
-      by (metis list.exhaust)
+      using list.exhaust
+      by metis
     then show ?thesis
-      by (metis isLegit legitPath.simps(2) legitPath.simps(3))
+      using isLegit legitPath.simps(2) legitPath.simps(3)
+      by metis
   qed    
 qed
 
-lemma legitPathInGraph[simp]: 
-  fixes walk::"'b awalk"
-  assumes isLegit:"legitPath G walk"
-  shows "set walk \<subseteq> arcs G"
-proof (induction walk rule: legitPath.induct)
-  case (1 G)
-  then show ?case sorry
+lemma tail_of_legit_path_legit:
+  assumes isLegit:"legitPath G (e # es)"
+  shows "legitPath G es"
+proof -
+  show ?thesis
+    using isLegit
+  proof (cases "es = []")
+    case True
+    then have is_empty:"es = []" by metis
+    have empty_good:"legitPath G []"
+      by simp
+    thus "legitPath G es" 
+      using is_empty empty_good by metis
 next
-  case (2 G e)
-  then show ?case sorry
-next
-  case (3 G e f es)
-  then show ?case sorry
+  case False
+  then have isLegitTail: "legitPath G (e #  es)" using isLegit by simp
+  then show "legitPath G es" 
+    using legitPath.simps(3) False legitPath.elims(1)
+    by auto
+  qed
 qed
 
-lemma getCyclicalWalks_in_arcs[simp]:
+lemma legitPathInGraph: 
+  shows "legitPath G walk \<longrightarrow> set walk \<subseteq> arcs G"
+proof (induction walk)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a walk)
+  assume IH1:"legitPath G walk \<longrightarrow> set walk \<subseteq> arcs G"
+  then show "legitPath G (a#walk) \<longrightarrow> set (a#walk) \<subseteq> arcs G"
+  proof -
+    have "set walk \<subseteq> arcs G \<or> \<not> legitPath G walk"
+      using IH1
+      by metis
+    then show ?thesis
+      by (metis (full_types) first_in_arc insert_subsetI list.simps(15) tail_of_legit_path_legit)
+  qed
+    
+qed
+
+lemma getCyclicalWalks_in_arcs:
  fixes  G :: "('a, 'b) pre_digraph"
  shows "\<forall> walk \<in> getCyclicalWalks G. set walk \<subseteq> arcs G"
 proof (intro ballI)
@@ -71,15 +97,9 @@ assume "walk \<in> getCyclicalWalks G"
   from this have legit:"legitPath G walk"
     by auto
   show "set walk \<subseteq> arcs G" 
-    using legit 
-    by simp
+    using legit legitPathInGraph
+    by metis
 qed
-
-lemma[simp]: "legitPath \<lparr>verts = v, arcs = {}, tail = t, head = h\<rparr> x = False"
-  using legitPath.elims(1) by force
-
-lemma no_arcs_no_cycle[simp]: "cycleExists \<lparr> verts = v, arcs = {},tail = t, head = h\<rparr> = False"
-  by simp
 
 
 end
