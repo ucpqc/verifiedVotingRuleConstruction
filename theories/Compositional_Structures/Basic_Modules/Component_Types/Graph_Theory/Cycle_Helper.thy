@@ -104,10 +104,9 @@ proof -
   then have single_cycle_in_cycles:"(getSingleCycle G)\<in>(getCyclicalWalks G)"
     using some_in_eq getSingleCycle.simps
     by metis
-  have "\<forall>x\<in>(getCyclicalWalks G). legitPath G x"
-    by auto
+  then have "distinct (getSingleCycle G) = False"
+    by simp
   then show "(getSingleCycle G) \<noteq> []"
-    using single_cycle_in_cycles legit_path_non_empty
     by auto
 qed
 
@@ -122,14 +121,36 @@ proof -
   have single_cycle_in_cycles:"(getSingleCycle G)\<in>(getCyclicalWalks G)"
     using getSingleCycle.simps not_empty some_in_eq
     by metis
-  show "set (getSingleCycle G) \<subseteq> arcs G"
-    using single_cycle_in_cycles
-    sorry
+  then have "legitPath G (getSingleCycle G)"
+    by simp
+  then show "set (getSingleCycle G) \<subseteq> arcs G"
+    using legitPathInGraph
+    by metis
 qed
 
+lemma trim_subset: "set (trim p) \<subseteq> set p"
+proof (induction p)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a p)
+  then show ?case
+  proof (cases "distinct p")
+    case True
+    then show ?thesis by simp
+  next
+    case False
+    then have induct:"trim (a#p) = trim p"
+      by simp
+    have "trim [x] = [x]" by simp
+    then show ?thesis using induct
+      by (simp add: local.Cons subset_insertI2) 
+  qed
+qed
 
-lemma trim_subset: "set (trimCyclicalPath p) \<subseteq> set p"
-   sorry
+lemma trim_cyc_subset: "set (trimCyclicalPath p) \<subseteq> set p"
+  using trim_subset dual_order.trans set_rev trimCyclicalPath.simps
+  by metis
 
 lemma trim_nonempty: "p \<noteq> [] \<Longrightarrow> trim p \<noteq> []"
 proof (induction p)
@@ -148,34 +169,48 @@ next
     then show ?thesis by simp
   qed
 qed
-  
 
-lemma trim_cyc_nonempty: "p \<noteq> [] \<Longrightarrow> trimCyclicalPath p \<noteq> []"
-  by simp
- 
-lemma min_elems_nonempty:
-  assumes non_empty:"l \<noteq> []"
-  shows "min_elems l f c p \<noteq> {}"
+lemma trim_cyc_nonempty:
+  assumes "p \<noteq> []" 
+  shows"trimCyclicalPath p \<noteq> []"
 proof -
-  show ?thesis
-    using non_empty assms min_elems.elims min_elems.simps(2)
+  have "trim p \<noteq> []"
+    using assms trim_nonempty
     by metis
+  then have "rev (trim p) \<noteq> []"
+    using rev_nonempty_induct
+    by simp
+  then show ?thesis
+    using trim_nonempty
+    by auto
 qed
 
-
+lemma min_elems_empty_list:
+  shows "min_elems xs f c p = {} \<longrightarrow> xs = []"
+proof (induction xs)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a xs)
+  assume IH:"min_elems xs f c p = {} \<longrightarrow> xs = []"
+  then have "min_elems (a#xs) f c p \<subseteq> {a} \<union> min_elems xs f c p"
+    by auto
+  then show "min_elems (a#xs) f c p = {} \<longrightarrow> (a#xs) = []" using IH by auto
+qed
+  
 lemma smallest_arcs_nonempty:
   assumes Cycle:"cycleExists G"
   shows "min_elems (getSimpleCycle G) f c p \<noteq> {}"
 proof -
   have first_step:"getSingleCycle G \<noteq> []"
-    using Cycle CollectD cycleExists.elims(2) distinct.simps(1) ex_in_conv getCyclicalWalks.simps getSingleCycle.simps
+    using Cycle single_cycle_non_empty
     by metis 
   have second_step:"getSimpleCycle G \<noteq> []"
-    using first_step
+    using first_step trim_cyc_nonempty
     by simp
   show "min_elems (getSimpleCycle G) f c p \<noteq> {}"
-    using second_step
-    by simp
+    using second_step min_elems_empty_list
+    by metis
 qed
 
 
@@ -186,14 +221,14 @@ proof (rule subsetI)
 fix x
   assume x_in_cycle:"x \<in> set (getSimpleCycle G)"
   have simple_in_single:"set (getSimpleCycle G) \<subseteq> set (getSingleCycle G)"
-    using trim_subset
+    using trim_cyc_subset
     by simp
   then have single_in_arcs:"set (getSingleCycle G) \<subseteq> arcs G"
     using single_cycle_in_arcs cycle
     by simp
   then have x_in_arcs: "x \<in> arcs G"
     using single_in_arcs x_in_cycle simple_in_single 
-    by simp
+    by auto
 show "x \<in> arcs G"
 by (rule x_in_arcs)
 qed
@@ -218,15 +253,21 @@ proof -
   have "getCyclicalWalks G = {}"
     proof (rule ccontr)
       assume "getCyclicalWalks G \<noteq> {}"
-      then obtain w where "w \<in> getCyclicalWalks G"
+      then obtain w where w_cyclical:"w \<in> getCyclicalWalks G"
         by auto
       then have "legitPath G w"
         by auto
-      then have "set w \<subseteq> arcs G"
-        sorry
-      then show False 
-        using empty
+      then have w_in_arcs: "set w \<subseteq> arcs G"
+        using legitPathInGraph
+        by metis
+      have "distinct w = False"
+        using w_cyclical
+        by simp
+      then have w_not_empty:"w \<noteq> []"
         by auto
+      then show False 
+        using empty w_in_arcs w_not_empty
+        by simp
     qed
     then show ?thesis
       by simp
