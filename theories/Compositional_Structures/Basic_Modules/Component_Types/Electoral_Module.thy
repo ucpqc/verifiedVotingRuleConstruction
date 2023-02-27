@@ -1208,7 +1208,7 @@ definition condorcet_consistency :: "'a Electoral_Module \<Rightarrow> bool" whe
     (\<forall> A p w. condorcet_winner A p w \<longrightarrow>
       (m A p =
         ({e \<in> A. condorcet_winner A p e},
-          A - (elect m A p),
+          A - (elect m A p),                 
           {})))"
 
 lemma condorcet_consistency2:

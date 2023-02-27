@@ -9,7 +9,7 @@ section \<open>Reject Module\<close>
 
 theory Reject_Module
   imports "Component_Types/Electoral_Module"
-beginCollectD assms cycleExists.elims(2) ex_in_conv getCyclicalWalks.simps getSingleCycle.elims)
+begin
 
 text \<open>
   The reject module is not concerned about the voter's ballots, and
@@ -25,14 +25,15 @@ fun reject_module :: "'a Electoral_Module" where
 
 subsection \<open>Soundness\<close>
 
-theorem elect_mod_sound[simp]: "electoral_module reject_module"
+theorem reject_mod_sound[simp]: "electoral_module reject_module"
   unfolding electoral_module_def
   by simp
 
 subsection \<open>Rejecting\<close>
 
-theorem elect_mod_rejecting[simp]: "rejecting reject_module"
-  unfolding electing_def
-  by simp
+theorem reject_mod_rejecting[simp]: "rejecting reject_module"
+  unfolding rejecting_def
+  by simp 
+
 
 end

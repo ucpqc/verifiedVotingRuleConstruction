@@ -9,8 +9,7 @@ section \<open>Elect Module\<close>
 
 theory Elect_Module
   imports "Component_Types/Electoral_Module"
-beginCollectD assms cycleExists.elims(2) ex_in_conv getCyclicalWalks.simps getSingleCycle.elims)
-
+begin
 text \<open>
   The elect module is not concerned about the voter's ballots, and
   just elects all alternatives. It is primarily used in sequence after

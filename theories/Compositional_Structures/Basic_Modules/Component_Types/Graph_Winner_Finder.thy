@@ -12,33 +12,35 @@ text\<open>
   the number of arcs with said vertice as their head/tail.
 \<close>
 
+text\<open>
+  WARNING: It's important to use in_arcs = {} instead of in_degree = 0.
+  Same with out_degree. This is because in_degree and out_degree use card.
+  And using cardinality is a cardinal sin.
+  It also causes the program to fail.
+\<close>
+type_synonym 'a Graph_Winner_Finder = "('a, ('a \<times> 'a)) pre_digraph \<Rightarrow> 'a Result"
 
-type_synonym ('a, 'b) Graph_Winner_Finder = "('a, 'b) pre_digraph \<Rightarrow> 'a Result"
+fun get_winners::"('a,'b) pre_digraph \<Rightarrow> 'a set" where
+"get_winners G = {v::'a. v\<in>verts G \<and> in_arcs G v = {}}"
 
-fun getWinners::"('a,'b) pre_digraph \<Rightarrow> 'a set" where
-"getWinners G = {v::'a. v\<in>verts G \<and> in_degree G v = 0}"
+fun get_losers::"('a, 'b) pre_digraph \<Rightarrow> 'a set" where
+"get_losers G = {v::'a. v\<in>verts G \<and> v\<notin>get_winners G}"
 
-fun getLosers::"('a, 'b) pre_digraph \<Rightarrow> 'a set" where
-"getLosers G = {v::'a. v\<in>verts G \<and> in_degree G v > 0 \<and> out_degree G v = 0}"
+fun evaluate_graph::"'a Graph_Winner_Finder" where
+"evaluate_graph G = (get_winners G, get_losers G, {})"
 
-fun getDeferred::"('a, 'b) pre_digraph \<Rightarrow> 'a set" where
-"getDeferred G = {v::'a. v\<in>verts G \<and> v\<notin>getWinners G \<and> v\<notin>getLosers G}"
+value "evaluate_graph \<lparr> verts={0::nat,1::nat,2::nat},arcs={(0,1),(1,2)}, tail = fst, head = snd \<rparr>"
 
-fun evaluateGraph::"('a,('a*'a)) Graph_Winner_Finder" where
-"evaluateGraph G = (getWinners G,getLosers G, getDeferred G)"
-
-value "evaluateGraph \<lparr> verts={0::nat,1::nat,2::nat},arcs={(0,1),(1,2)}, tail = fst, head = snd \<rparr>"
-
-lemma validResult:"\<forall>G::('a,('a*'a)) pre_digraph.(well_formed (verts G) (evaluateGraph G))"
+lemma validResult:"\<forall>G::('a,('a*'a)) pre_digraph.(well_formed (verts G) (evaluate_graph G))"
   by auto
   
 
-lemma in_degree_translate[simp]:"in_degree G x \<equiv> card {a \<in> arcs G. head G a = x}"
-  unfolding in_degree_def in_arcs_def
+lemma in_arcs_translate[simp]:"in_arcs G x \<equiv> {a \<in> arcs G. head G a = x}"
+  unfolding in_arcs_def
   by simp
 
-lemma out_degree_translate[simp]:"out_degree G x \<equiv> card {a \<in> arcs G. tail G a = x}"
-  unfolding out_degree_def out_arcs_def
+lemma out_arcs_translate[simp]:"out_arcs G x \<equiv> {a \<in> arcs G. tail G a = x}"
+  unfolding out_arcs_def
   by simp
   
 (*
@@ -51,11 +53,9 @@ lemma "(card {e\<in>A. e=a} = 0) \<equiv> (\<forall>x\<in>A. x\<noteq>a)"
   by blast
 *)
 
-lemma "x\<in>(getWinners G) \<equiv> x\<in>(verts G)\<and> card {a\<in>(arcs G). head G a = x}= 0"
+lemma winners_def:"x\<in>(get_winners G) \<equiv> x\<in>(verts G)\<and>  {a\<in>(arcs G). head G a = x}= {}"
   by simp_all
 
-lemma "x\<in>(getLosers G) \<equiv> x\<in>(verts G) \<and> card {a\<in>(arcs G). head G a = x} > 0 \<and> card {b\<in>(arcs G). tail G b = x} = 0"
-  by simp_all
 
 
 
