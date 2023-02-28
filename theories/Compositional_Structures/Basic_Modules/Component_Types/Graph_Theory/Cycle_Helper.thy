@@ -483,20 +483,24 @@ proof (rule subsetI)
 qed
 
 
-lemma condorcet_not_in_simple_cycle:
+lemma condorcet_not_in_cycle:
   assumes "in_arcs G c = {}"
   assumes "cycle_exists G"
-  shows "set (get_simple_cycle G) \<inter> out_arcs G c = {}"
+  shows "(all_arcs_in_cycles G) \<inter> out_arcs G c = {}"
 proof -
-  have start:"(get_simple_cycle G) = trim_cyclical_path (get_single_cycle G)"
-    by simp
-  then have "get_single_cycle G \<in> get_cyclical_walks G"
-    using cycle_exists.elims(2) get_single_cycle.simps some_in_eq assms
+  have "\<forall>x\<in>all_simple_cycles G. \<exists>y\<in>get_cyclical_walks G. x=trim_cyclical_path y"
+    using  all_simple_cycles_def image_iff
     by metis
-  then show ?thesis 
-    using start no_in_arcs_no_head assms inf_commute last_in_set 
-      list.set_cases single_cycle_non_empty
-    by (metis (no_types, lifting))
+  then have "\<forall>x\<in>all_simple_cycles G. \<exists>y\<in>get_cyclical_walks G. 
+    (x=trim_cyclical_path y) \<and> path G y"
+    using get_cyclical_walks.simps
+    by simp
+  then have "\<forall>x\<in>all_simple_cycles G. set x \<inter> out_arcs G c = {}"
+    using  no_in_arcs_no_head assms empty_set inf_bot_right inf_commute path.elims(2) subset_empty trim_cyc_subset
+    by (smt (verit))
+  then show ?thesis
+    using all_arcs_in_cycles_def Union_disjoint image_iff
+    by (smt (verit, best))
 qed
 
 subsection \<open>Finding the arc with the smallest weight in a cycle\<close>

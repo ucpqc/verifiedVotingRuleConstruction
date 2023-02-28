@@ -23,16 +23,10 @@ fun split_cycle::"'a Electoral_Module" where
 "split_cycle a p = evaluate_graph( resolve_all_cycles 
 (create_margin_graph a p mg_weight) mg_weight p)"
 
-fun split_cycle_first_round::"'a Electoral_Module" where
-"split_cycle_first_round a p = evaluate_graph(create_margin_graph a p mg_weight)"
-
-lemma first_round_sound:"electoral_module split_cycle_first_round"
+lemma split_cycle_sound:"electoral_module split_cycle"
   unfolding electoral_module_def
-  using Graph_Winner_Finder.validResult
-proof -
-  show "\<forall>A rs. finite_profile (A::'a set) rs \<longrightarrow> well_formed A (split_cycle_first_round A rs)"
-    by (metis (no_types) candidates_are_vertices split_cycle_first_round.simps validResult)
-qed
+  using validResult candidates_are_vertices resolve_cycle_preserves_verts split_cycle.simps
+  by metis
 
 lemma condorcet_winner_in_graph: "condorcet_winner a p c \<longrightarrow> c \<in> a"
   by simp
@@ -114,7 +108,7 @@ qed
 
 lemma non_condorcet_is_loser: 
   assumes "condorcet_winner a p c"
-  shows "(a-{c}) =  reject (split_cycle) a p"
+  shows "(a-{c}) \<subseteq> reject (split_cycle) a p"
 proof -
   have "(\<forall>x\<in>(a - {c}). mg_weight a p (c,x) > 0) \<and> c\<in>a"
     using non_condorcet_weight condorcet_winner_in_graph assms
@@ -124,20 +118,30 @@ proof -
     using non_condorcet_degree
     by metis
   then have "\<forall>x\<in>(a - {c}). \<exists>y. (y\<in>in_arcs (
-    resolve_all_cycles (create_margin_graph a p mg_weight) mg_weight p) x) 
-    \<and> (y \<in>out_arcs (
-    resolve_all_cycles (create_margin_graph a p mg_weight) mg_weight p) c)"
+    resolve_all_cycles (create_margin_graph a p mg_weight) mg_weight p) x)"
   proof (cases "cycle_exists (create_margin_graph a p mg_weight)")
     case True
     have "in_arcs (create_margin_graph a p mg_weight) c = {}"
       using condorcet_winner_no_in_arcs assms
       by metis
     then have "(out_arcs (create_margin_graph a p mg_weight) c)
-      \<inter> set (get_simple_cycle (create_margin_graph a p mg_weight)) = {}"
-      using condorcet_not_in_simple_cycle True Int_commute
+      \<inter> (all_arcs_in_cycles (create_margin_graph a p mg_weight)) = {}"
+      using condorcet_not_in_cycle True Int_commute
       by metis
-      
-    then show ?thesis sorry
+    then have "\<forall>x\<in>(a - {c}). \<exists>y. (y\<in>in_arcs
+     (create_margin_graph a p mg_weight) x) 
+    \<and> (y\<notin>all_arcs_in_cycles(create_margin_graph a p mg_weight))"
+      using unresolved disjoint_iff_not_equal
+      by meson
+    then have "\<forall>x\<in>(a - {c}). \<exists>y. (y\<in>in_arcs
+     (create_margin_graph a p mg_weight) x) 
+    \<and> (y\<in>arcs(resolve_all_cycles(create_margin_graph a p mg_weight) mg_weight p))"
+      using resolve_all_cycles_preserves_non_cycle_arcs True arcs_subset Diff_iff in_arcs_in_arcs in_mono
+      by (smt (verit, ccfv_threshold) )
+    then show ?thesis 
+      using resolve_all_cycles_preserves_non_cycle_arcs True unresolved in_arcs_def
+      resolve_cycle_preserves_verts resolve_all_cycles_preserves_head resolve_all_cycles_preserves_tail
+      by (metis (no_types, lifting) in_in_arcs_conv)
   next
     case False
     then have "arcs (resolve_all_cycles (create_margin_graph a p mg_weight) mg_weight p)
@@ -145,12 +149,60 @@ proof -
       by simp
     then show ?thesis 
       using unresolved in_in_arcs_conv in_out_arcs_conv resolve_all_cycles_preserves_head resolve_all_cycles_preserves_tail
-      by (metis (no_types, lifting) )
-      
+      by (metis (no_types, lifting) )      
   qed
+  then have in_arcs_exist:"\<forall>x\<in>a-{c}. in_arcs (resolve_all_cycles 
+    (create_margin_graph a p mg_weight) mg_weight p) x \<noteq> {}"
+    using empty_iff
+    by metis
+  have "\<forall>x\<in>a-{c}. x\<in>verts (resolve_all_cycles 
+    (create_margin_graph a p mg_weight) mg_weight p)"
+    using candidates_are_vertices resolve_cycle_preserves_verts DiffD1
+    by metis   
+  then have "\<forall>x\<in>a-{c}. x\<in>get_losers (resolve_all_cycles 
+    (create_margin_graph a p mg_weight) mg_weight p)"
+    using winners_def in_arcs_exist
+    by simp  
+  then show ?thesis
+    using evaluate_graph.simps fst_eqD snd_eqD split_cycle.simps subsetI
+    by metis    
+qed
 
-lemma first_round_condorcet_consistent:"condorcet_consistency split_cycle"
-  sorry
+lemma condorcet_winner_sole_winner:
+  assumes "condorcet_winner a p c"
+  shows "split_cycle a p = ({c},a-{c},{})"
+proof -
+  have partition: "set_equals_partition a (split_cycle a p)"
+    using candidates_are_vertices resolve_cycle_preserves_verts split_cycle.elims validResult well_formed.elims(2)
+    by metis 
+  have disjoint:"disjoint3 (split_cycle a p)"
+    using validResult split_cycle.simps well_formed.elims(2)
+    by metis
+  have winner:"c\<in>elect split_cycle a p"
+    using assms condorcet_winner_is_winner
+    by metis
+  have loser:"a-{c}\<subseteq> reject split_cycle a p"
+    using assms non_condorcet_is_loser
+    by metis
+  then have elected:"elect split_cycle a p={c}"
+    using winner disjoint partition Diff_empty Int_absorb2 Int_insert_right_if1 disjoint3.simps elect_subset insert_Diff insert_Diff_single prod.collapse reject_subset subset_Diff_insert subset_antisym well_formed.elims(3)
+    by (smt (verit)) 
+  then have rejected:"reject split_cycle a p=a-{c}"
+    using partition disjoint winner loser
+       Diff_empty Int_iff disjoint3.simps empty_iff prod.collapse reject_subset subset_Diff_insert subset_antisym well_formed.elims(3)
+    by metis
+  have deferred:"defer split_cycle a p = {}"
+    using evaluate_graph.simps split_cycle.simps snd_conv
+    by metis
+  show ?thesis
+    using elected rejected deferred
+    by simp
+qed
+
+
+lemma split_cycle_condorcet_consistent:"condorcet_consistency split_cycle"
+  using condorcet_winner_sole_winner split_cycle_sound condorcet_consistency2 fst_eqD
+  by (smt (verit, ccfv_threshold))
 
  
 fun testProfile::"candidates \<Rightarrow> candidates \<Rightarrow> candidates \<Rightarrow> candidates Profile" where 
