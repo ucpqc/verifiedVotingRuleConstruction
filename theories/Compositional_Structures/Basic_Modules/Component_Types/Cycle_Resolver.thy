@@ -41,7 +41,7 @@ fun min_elems ::  "'a Weight_Function \<Rightarrow> 'a set
   \<Rightarrow> 'a Profile  \<Rightarrow> ('a*'a) list \<Rightarrow> ('a*'a) set" where
 "min_elems f c p l = min_help l f c p l"
 
-lemma min_elems_give_min:
+lemma min_help_gives_min:
   shows "\<forall>y\<in>set list. x\<in>min_help list f c p (cyc) \<longrightarrow> f c p x \<le> f c p y"
 proof (induction rule: min_help.induct)
   case (1 list f c p)
@@ -116,6 +116,68 @@ proof -
   then show ?thesis
     using min_help_in_set
     by simp
+qed
+
+lemma min_elems_give_min:
+  "\<forall>y\<in>set cyc. x\<in>min_elems f c p (cyc) \<longrightarrow> f c p x \<le> f c p y"
+proof -
+  have "min_elems f c p cyc = min_help cyc f c p cyc"
+    by simp
+  then show ?thesis
+    using min_help_gives_min
+    by simp
+qed
+
+lemma min_in_min_help:
+  assumes "\<forall>y\<in>set list. f c p x \<le> f c p y"
+  shows "x\<in>set cyc\<longrightarrow>x\<in>min_help list f c p cyc"
+proof (induction cyc)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a cyc)
+  assume IH:"x\<in>set cyc \<longrightarrow> x\<in>min_help list f c p cyc"
+  have 1:"x\<in>set (a#cyc)\<longrightarrow>x\<in>min_help list f c p (a#cyc)"
+  proof (cases "x\<in>set (a#cyc)")
+    case True
+    then have x_in_set:"x\<in>set (a#cyc)"
+      by simp
+    then show ?thesis 
+    proof (cases "x=a")
+      case True
+      then have "min_help list f c p (a#cyc) = {a} \<union> min_help list f c p (cyc)"
+        using assms
+        by simp 
+      then show ?thesis sorry
+    next
+      case False
+      then show ?thesis 
+        using x_in_set IH
+        by simp
+    qed
+  next
+    case False
+    then show ?thesis by simp
+  qed
+
+  have 2:"x\<in>min_help list f c p cyc \<longrightarrow> x\<in>min_help list f c p (a#cyc)"
+  proof (cases "\<forall> y \<in> set list. f c p a \<le> f c p y")
+    case True
+    then have "min_help list f c p (a#cyc) = {a} \<union> min_help list f c p cyc"
+      by simp
+    then show ?thesis
+      by simp
+  next
+    case False
+    then have "min_help list f c p (a#cyc) = min_help list f c p cyc"
+      by auto
+    then show ?thesis 
+      by simp
+  qed
+  
+  show " x\<in>set (a#cyc) \<longrightarrow> x\<in>min_help list f c p (a#cyc)"
+  
+  
 qed
 
 lemma smallest_arcs_in_graph:

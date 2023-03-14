@@ -19,17 +19,17 @@ text\<open>
   The following two functions serve to find cycles in a graph
 \<close>
 
-fun path ::"('a, 'b) pre_digraph \<Rightarrow> 'b awalk \<Rightarrow> bool" where
+fun path ::"'a Margin_Graph \<Rightarrow> ('a\<times>'a) awalk \<Rightarrow> bool" where
 "path G [] = True" |
 "path G [e] = (e\<in>(arcs G) \<and> head G e \<noteq> tail G e)" |
 "path G (e # (f # es))= (e\<in>(arcs G) \<and> head G e \<noteq> tail G e \<and> (head G e) =
  (tail G f)\<and> path G (f#es))"
 
-fun get_cyclical_walks::"('a, 'b) pre_digraph \<Rightarrow> 'b awalk set" where
+fun get_cyclical_walks::"'a Margin_Graph \<Rightarrow> ('a\<times>'a) awalk set" where
 "get_cyclical_walks G = {walk.(path G walk)\<and>
  (length walk \<le> card(verts G)) \<and> \<not>(distinct walk)}"
 
-fun cycle_exists::"('a, 'b) pre_digraph \<Rightarrow> bool" where
+fun cycle_exists::"'a Margin_Graph \<Rightarrow> bool" where
 "cycle_exists G = (get_cyclical_walks G  \<noteq> {})"
 
 lemma first_in_arc:"path G (e # es) \<longrightarrow> e\<in>arcs G"
@@ -42,7 +42,7 @@ proof -
   show ?thesis
     using assms
   proof -
-    obtain bb :: "'b list \<Rightarrow> 'b" and bbs :: "'b list \<Rightarrow> 'b list" where
+    obtain bb :: "('a\<times>'a) list \<Rightarrow> ('a\<times>'a)" and bbs :: "('a\<times>'a) list \<Rightarrow> ('a\<times>'a) list" where
       "\<forall>bs. bs = bb bs # bbs bs \<or> bs = []"
       using list.exhaust
       by metis
@@ -500,7 +500,7 @@ next
       using trim_rev.simps(2)
       by metis     
     moreover have "path G (e#es) \<longrightarrow> path G (butlast (e#es))"
-      
+      sorry
     ultimately show ?thesis using 2 False by simp
   qed 
 qed
@@ -717,15 +717,78 @@ proof -
 qed
  
 lemma trim_cyc_cycle:
+  assumes "x\<in>get_cyclical_walks G"
+  assumes "tail G = fst \<and> head G = snd"
   assumes "(a#as) = trim_cyclical_path x"
   shows "fst a = snd (last (a#as))"
 proof -
-  obtain e es where "(if \<not>(distinct_fst(trim_rev(trim (e#es)))) 
-    then butlast (trim_rev(trim (e#es))) 
-    else butfirst(trim_rev(trim (e#es)))) = a#as"
-    using assms list.discI trim_cyclical_path.elims
-    by (metis )
-
+  obtain e es where ees_def:"e#es = x"
+    using assms(3) trim_cyclical_path.elims
+    by metis
+  then obtain f fs where ffs_def:"f#fs = trim_rev(trim (e#es))"
+    using trim_nonempty trim_rev_nonempty butfirst.elims
+    by metis
+  have "path G x"
+    using assms(1) by simp
+  then have still_path:"path G (f#fs)"
+    using trim_path_path trim_rev_path_path ees_def ffs_def
+    by metis
+  have "\<not>(distinct x)" 
+    using assms(1) by simp
+  then have "\<not>(distinct_fst (x) \<and> distinct_snd (x))"
+    using distinct_arc_distinct_vert distinct.simps(1) trim.elims
+    by metis
+  then have trim_dis:"\<not>(distinct_fst (trim x) \<and> distinct_snd (trim x))"
+    using trim_not_distinct
+    by metis
+  then have not_distinct:"\<not>(distinct_fst (f#fs) \<and> distinct_snd (f#fs))"
+    using trim_rev_not_distinct ffs_def ees_def
+    by simp
+  have butfirst_distinct:"(distinct_fst (butfirst(f#fs)) 
+    \<and> distinct_snd (butfirst(f#fs)))"
+    using ees_def ffs_def trim_rev_trim_near_distinct
+    trim_dis butfirst.simps(2) neq_Nil_conv trim_nearly_distinct trim_nonempty
+    by (metis (mono_tags, opaque_lifting))
+  have butlast_distinct:"(distinct_fst (butlast(f#fs)) 
+    \<and> distinct_snd (butlast(f#fs)))"
+    using trim_rev_nearly_distinct ffs_def
+    by metis
+  then show ?thesis
+  proof (cases "\<not>(distinct_fst (f#fs))")
+    case True
+    then have "\<exists>i j. i < length (f#fs) \<and> j < length (f#fs) \<and>
+      fst((f#fs)!i) = fst((f#fs)!j) \<and> i \<noteq> j"
+      using distinct_fst.simps distinct_conv_nth length_map nth_map
+      by (metis (mono_tags, lifting))
+    then obtain i j where ij_def:"i < length (f#fs) \<and> j < length (f#fs) \<and>
+      fst((f#fs)!i) = fst((f#fs)!j) \<and> i < j"
+      using nat_neq_iff
+      by metis      
+    have "distinct_fst (butfirst (f#fs))"
+      using butfirst_distinct
+      by simp
+    then have "\<nexists>k1 k2. k1 < length (butfirst (f#fs)) \<and> k2 < length (butfirst (f#fs)) \<and>
+      fst((butfirst (f#fs))!k1) = fst((butfirst (f#fs))!k2) \<and> k1 \<noteq> k2"
+      using distinct_fst.simps distinct_conv_nth length_map nth_map
+      by (metis (mono_tags, lifting))
+    then have key:"fst f = fst (last (f#fs))"
+      using True distinct_fst.simps
+      sorry
+    then have "(a#as) = butlast(f#fs)"
+      using assms True ffs_def ees_def trim_cyclical_path.simps(2)
+      by metis
+    moreover have "snd (last (butlast(f#fs))) = fst (last (f#fs))"
+      using assms(2) still_path path.simps path.elims
+      sorry
+    ultimately show ?thesis 
+      using key butlast.simps(2) list.discI nth_Cons_0
+      by metis       
+  next
+    case False
+    then show ?thesis sorry
+  qed
+qed   
+    
 
 lemma trim_head_away:
   assumes "distinct (e#es) = False"

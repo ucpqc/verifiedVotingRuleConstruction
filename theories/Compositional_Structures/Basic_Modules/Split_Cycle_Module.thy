@@ -399,74 +399,123 @@ proof -
     by simp
 qed
 
-    
+lemma lifted_in_arcs_min_arcs:
+  assumes "(finite A \<and> w \<in> elect split_cycle A p \<and> lifted A p q w)"
+  shows "in_arcs (create_margin_graph A q mg_weight) w 
+    \<subseteq> min_arcs (create_margin_graph A q mg_weight) mg_weight A q"
+proof (rule subsetI)
+  fix x
+  assume x_def:"x\<in>in_arcs (create_margin_graph A q mg_weight) w"
+  obtain G where G_def:"G = (create_margin_graph A p mg_weight)"
+    by simp
+  obtain G' where G'_def:"G' = (create_margin_graph A q mg_weight)"
+    by simp
+  have x_snd:"snd x = w"
+    using x_def in_arcs_def 
+    by simp
+  have "mg_weight A q (w,w) = 0"
+    by simp
+  then have x_fst:"fst x \<in> A-{w}" 
+    using x_def by auto
+  have "x\<in>in_arcs G w"
+    using x_def lift_in_arcs_subset assms subset_iff G_def
+    by metis 
+  moreover have "in_arcs (resolve_all_cycles G mg_weight p) w = {}"
+    using assms G_def by simp
+  ultimately have "x\<in>min_arcs G mg_weight A p"
+    using G_def resolve_all_cycles_preserves_head select_convs(2) empty_iff 
+    DiffI candidates_are_vertices  resolve_all_cycles.simps in_in_arcs_conv
+    by metis
+  then obtain simpcyc where sc_def:"simpcyc \<in> all_simple_cycles G 
+    \<and> x\<in>min_elems mg_weight A p simpcyc"
+    using Union_iff min_arcs_def by fastforce
+  then have x_in_sc: "x\<in>set simpcyc"
+    using min_elems_in_set subset_iff by metis
+  then have "\<exists>i. i<length simpcyc \<and> simpcyc!i = x"
+    using sc_def
+    by (simp add: in_set_conv_nth)    
+  then obtain i where i_def:"i<length simpcyc \<and> simpcyc!i = x"
+    by auto
+  moreover have "distinct_snd simpcyc"
+    using simple_cycle_distinct sc_def by metis
+  ultimately have notw:"\<forall>j<length simpcyc.  j \<noteq> i\<longrightarrow> snd (simpcyc!j)\<noteq>w"
+    using x_snd distinct_Ex1 distinct_snd.elims(2) length_map nth_map nth_mem
+    by metis 
+  moreover have subset_sc:"set simpcyc \<subseteq> arcs G"
+    using sc_def cyc_arc_still_arc all_arcs_in_cycles_def
+    by blast
+  ultimately have "\<forall>j<length simpcyc.  j \<noteq> i\<longrightarrow>(simpcyc!j)\<in>arcs G'"
+    using assms G'_def G_def other_arcs_stay subset_iff nth_mem length_map nth_map
+  proof -
+    have f1: "veriT_sk0 < length simpcyc \<longrightarrow> simpcyc ! veriT_sk0 \<in> set simpcyc"
+      by auto
+    have f2: "Profile.lifted A p q w \<and> simpcyc ! veriT_sk0 \<in> arcs (create_margin_graph A p mg_weight) \<and> w \<noteq> snd (simpcyc ! veriT_sk0) \<longrightarrow> simpcyc ! veriT_sk0 \<in> arcs (create_margin_graph A q mg_weight)"
+      by (metis other_arcs_stay)
+    have f3: "\<forall>p. p \<in> set simpcyc \<longrightarrow> p \<in> arcs G"
+      using \<open>set simpcyc \<subseteq> arcs G\<close> by force
+    obtain nn :: nat where
+      "(\<exists>veriT_vr1. (veriT_vr1 < length simpcyc \<and> i \<noteq> veriT_vr1) \<and> simpcyc ! veriT_vr1 \<notin> arcs G') \<longrightarrow> (nn < length simpcyc \<and> i \<noteq> nn) \<and> simpcyc ! nn \<notin> arcs G'"
+      by moura
+    then show ?thesis
+      using f3 f2 f1 G'_def G_def \<open>\<forall>j<length simpcyc. j \<noteq> i \<longrightarrow> snd (simpcyc ! j) \<noteq> w\<close> assms by blast
+  qed
+  then have sc_def2:"simpcyc \<in> all_simple_cycles G'"
+    sorry
+  have 1:"\<forall>y\<in>set simpcyc. mg_weight A p x \<le> mg_weight A p y"
+    using sc_def min_elems_give_min by metis
+  have 2:"mg_weight A q x \<le> mg_weight A p x"
+    using x_snd x_fst assms lift_decreases_in_arc_weight prod.collapse
+    by metis
+  have "\<forall>j<length simpcyc. fst (simpcyc!j) \<in> A"
+    using subset_sc G_def arcs_lead_to_verts(1) Diff_iff G'_def candidates_are_vertices
+    \<open>\<forall>j<length simpcyc. j \<noteq> i \<longrightarrow> simpcyc ! j \<in> arcs G'\<close>  i_def x_fst
+    by metis
+  moreover have "\<forall>j<length simpcyc. j\<noteq>i \<longrightarrow> snd (simpcyc!j) \<in> A-{w}"
+    using subset_sc G_def arcs_lead_to_verts(2) Diff_iff G'_def candidates_are_vertices
+    \<open>\<forall>j<length simpcyc. j \<noteq> i \<longrightarrow> simpcyc ! j \<in> arcs G'\<close>  i_def x_fst notw empty_iff insert_iff
+    by metis
+  ultimately have 3:"\<forall>j<length simpcyc. j\<noteq>i \<longrightarrow>
+    mg_weight A q (simpcyc!j) \<ge> mg_weight A p (simpcyc!j)"
+    using assms lift_keeps_other_weights lift_increases_out_arc_weight insertE
+     Diff_empty Diff_insert0  insert_Diff order_class.order_eq_iff prod.collapse
+    by (smt (verit, del_insts))
+  have "\<forall>y\<in>set simpcyc. mg_weight A q x \<le> mg_weight A q y"
+    using 1 2 3 i_def order_less_le_trans in_set_conv_nth
+    Orderings.order_eq_iff order_le_imp_less_or_eq order_less_imp_le 
+    by (smt (verit, ccfv_threshold) )
+  then have "x\<in>min_elems mg_weight A q simpcyc"
+    using x_in_sc min_in_min_elems
+    by metis
+  then show "x\<in>min_arcs (create_margin_graph A q mg_weight) mg_weight A q"
+    using sc_def2 min_arcs_def G'_def
+    by blast    
+qed
 
 lemma lift_winner_still_winner:
   assumes "(finite A \<and> w \<in> elect split_cycle A p \<and> lifted A p q w)"
   shows "w \<in> elect split_cycle A q"
 proof -
-  have final:"in_arcs (resolve_all_cycles 
-    (create_margin_graph A p mg_weight) mg_weight p) w = {}"
+  have "in_arcs (create_margin_graph A q mg_weight) w 
+    \<subseteq> min_arcs (create_margin_graph A q mg_weight) mg_weight A q"
+    using assms lifted_in_arcs_min_arcs
+    by metis
+  then have no_in_arcs: "in_arcs (resolve_all_cycles 
+      (create_margin_graph A q mg_weight) mg_weight q) w = {}"
+    using resolve_all_cycles.simps in_arcs_def
+    by fastforce
+  moreover have "w\<in>verts(create_margin_graph A q mg_weight)"
     using assms
     by simp
-  show ?thesis
-  proof (cases "in_arcs (create_margin_graph A p mg_weight) w = {}")
-    case True
-    then have "in_arcs (delete_empty_edges (create_full_graph A) 
-      A p mg_weight) w = {}"
-      by simp
-    moreover have "w \<in> A" 
-      using assms by simp
-    ultimately have "\<forall>x\<in>A-{w}. mg_weight A p (x,w) = 0"
-      using no_in_arcs_no_weights
-      by auto
-    then have "\<forall>x\<in>A-{w}. mg_weight A q (x,w) = 0"
-      using assms lift_decreases_in_arc_weight bot.extremum_unique bot_nat_def
-      by metis
-    then have "in_arcs (create_margin_graph A q mg_weight) w = {}"
-      using condorcet_degree assms
-      by auto
-    then have no_in_arcs: "in_arcs (resolve_all_cycles 
-      (create_margin_graph A q mg_weight) mg_weight q) w = {}"
-      using resolving_in_arcs_empty
-      by metis
-    moreover have "w\<in>verts(create_margin_graph A q mg_weight)"
-      using assms
-      by simp
-    then have "w\<in>verts(resolve_all_cycles 
-      (create_margin_graph A q mg_weight) mg_weight q)"
-      using resolve_cycle_preserves_verts
-      by metis
-    then have "w\<in>get_winners (resolve_all_cycles 
-      (create_margin_graph A q mg_weight) mg_weight q)"
-      using winners_def no_in_arcs in_arcs_def
-      by simp
-    then show ?thesis
-      by simp
-  next
-    case False
-    obtain G where G_def:"G = (create_margin_graph A p mg_weight)"
-      by simp
-    then have hd_def:"head G = snd \<and> tail G = fst"
-      by simp
-    then have snd_w:"\<forall>x\<in>in_arcs G w. snd x = w"
-      using in_arcs_def
-      by simp
-    have "in_arcs G w \<subseteq> (min_arcs G mg_weight A p)"
-      using G_def final resolve_all_cycles.simps candidates_are_vertices in_in_arcs_conv
-      DiffI insert_absorb insert_not_empty resolve_all_cycles_preserves_head select_convs(2) subsetI
-      by (smt (verit, del_insts))
-    then have "\<forall>x\<in>in_arcs G w. \<exists>cyc\<in>all_simple_cycles G. 
-      x\<in>(min_elems mg_weight A p cyc)"
-      using min_arcs_def
-      by fastforce
-    then have "\<forall>x\<in>in_arcs G w. \<exists>cyc\<in>all_simple_cycles G. 
-      x\<in>(set cyc) \<and> set (cyc)-{x}\<inter>in_arcs G w = {}"
-      using in_arcs_def snd_w all_simple_cycles_def trim_cyc_distinct_unfinished min_elems_in_set
-      
-
-    then show ?thesis sorry
-  qed
+  then have "w\<in>verts(resolve_all_cycles 
+    (create_margin_graph A q mg_weight) mg_weight q)"
+    using resolve_cycle_preserves_verts
+    by metis
+  then have "w\<in>get_winners (resolve_all_cycles 
+    (create_margin_graph A q mg_weight) mg_weight q)"
+    using winners_def no_in_arcs in_arcs_def
+    by simp
+  then show ?thesis
+    by simp
 qed
 
 lemma split_cycle_monotone:

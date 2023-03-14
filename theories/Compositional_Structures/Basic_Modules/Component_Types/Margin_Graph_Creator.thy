@@ -34,6 +34,25 @@ fun create_margin_graph::"'a Margin_Graph_Creator" where
 lemma candidates_are_vertices:"verts (create_margin_graph A p f) = A"
   by simp
 
+lemma arcs_lead_to_verts:
+  assumes "x\<in>arcs (create_margin_graph A p f)"
+  shows "fst x\<in>verts (create_margin_graph A p f)" and "snd x \<in>verts (create_margin_graph A p f)"
+proof 
+  have  "verts (create_margin_graph A p f) = A"
+    by simp
+  moreover have "x\<in>get_arcs A"
+    using assms by auto
+  ultimately have proven: "fst x\<in>verts (create_margin_graph A p f)
+    \<and> snd x\<in>verts (create_margin_graph A p f)"
+    by fastforce
+  then show "fst x\<in>verts (create_margin_graph A p f)"
+    by simp
+  show "snd x\<in>verts (create_margin_graph A p f)"
+    using proven by simp
+  show "verts (create_margin_graph A p f) \<subseteq> verts (create_margin_graph A p f)"
+    by simp
+qed
+
 lemma condorcet_degree:
   assumes "\<forall>x\<in>(A - {c}). f A p (x,c) = 0 \<and> c\<in>A"
   shows "in_arcs (create_margin_graph A p f) c = {}"
