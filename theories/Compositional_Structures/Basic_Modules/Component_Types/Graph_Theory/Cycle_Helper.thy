@@ -67,10 +67,32 @@ proof -
       using is_empty empty_good by metis
 next
   case False
-  then have "path G (e #  es)" using assms by simp
+  then have "path G (e # es)" using assms by simp
   then show "path G es" 
     using path.simps(3) False path.elims(1)
     by auto
+  qed
+qed
+
+lemma rev_tail_of_path_is_path:
+  assumes "path G (e # es)"
+  shows "path G (butlast (e#es))"
+proof -
+  show ?thesis
+    using assms
+  proof (cases "butlast (e#es) = []")
+    case True
+    then have is_empty:"butlast (e#es) = []" by metis
+    have empty_good:"path G []"
+      by simp
+    thus "path G (butlast (e#es))" 
+      using is_empty empty_good by metis
+next
+  case False
+  then have "path G (e # es)" using assms by simp
+  then show "path G (butlast (e#es))" 
+    using path.simps(3) False path.elims butlast.simps
+    sorry
   qed
 qed
 
@@ -217,45 +239,162 @@ text\<open>
   The following three functions serve to turn any cycle into a simple cycle
 \<close>
 
-fun trim::"'b awalk \<Rightarrow> 'b awalk" where
+fun distinct_fst::"('a\<times>'a) awalk \<Rightarrow> bool" where
+"distinct_fst walk = distinct (map fst walk)"
+
+fun distinct_snd::"('a\<times>'a) awalk \<Rightarrow> bool" where
+"distinct_snd walk = distinct (map snd walk)"
+
+fun trim::"('a\<times>'a) awalk \<Rightarrow> ('a\<times>'a) awalk" where
 "trim [] = []" |
-"trim (e # es) = (if distinct es then (e#es) else trim es)"
+"trim (e # es) = (if (distinct_fst (es)) \<and> (distinct_snd (es))
+  then (e#es) else trim es)"
 
-fun trim_cyclical_path::"'b awalk \<Rightarrow> 'b awalk" where
-"trim_cyclical_path walk = trim(rev(trim walk))" 
+fun trim_rev::"('a\<times>'a) awalk \<Rightarrow> ('a\<times>'a) awalk" where
+"trim_rev [] = []" |
+"trim_rev (e # es) = (if (distinct_fst (butlast (e#es))) \<and> (distinct_snd (butlast (e#es)))
+  then (e#es) else trim_rev (butlast (e#es)))"
 
-lemma trim_subset: "set (trim p) \<subseteq> set p"
-proof (induction p)
-  case Nil
-  then show ?case by simp
+fun butfirst::"'a list \<Rightarrow> 'a list" where
+"butfirst [] = []" |
+"butfirst (e#es) = es"
+
+fun trim_cyclical_path::"('a\<times>'a) awalk \<Rightarrow> ('a\<times>'a) awalk" where
+"trim_cyclical_path [] = []" |
+"trim_cyclical_path (e # es) = (if \<not>(distinct_fst(trim_rev(trim (e#es)))) 
+then butlast (trim_rev(trim (e#es))) else butfirst(trim_rev(trim (e#es))))" 
+
+
+lemma trim_subset: "set (trim (e#es)) \<subseteq> set (e#es)"
+proof (cases "(distinct_fst (es)) \<and> (distinct_snd (es))")
+  case True
+  then show ?thesis by simp                                   
 next
-  case (Cons a p)
-  then show ?case
-  proof (cases "distinct p")
-    case True
-    then show ?thesis by simp
+  case False
+  then show ?thesis
+  proof (induction rule:trim.induct)
+    case 1
+    then show ?case by simp
   next
-    case False
-    then have induct:"trim (a#p) = trim p"
-      by simp
-    have "trim [p] = [p]" by simp
-    then show ?thesis using induct
-      by (simp add: local.Cons subset_insertI2) 
+    case (2 e es)
+    then show ?case using False
+      by auto
   qed
 qed
 
-lemma trim_cyc_subset: "set (trim_cyclical_path p) \<subseteq> set p"
-  using trim_subset dual_order.trans set_rev trim_cyclical_path.simps
-  by metis
+lemma trim_rev_subset: "set (trim_rev (e#es)) \<subseteq> set (e#es)"
+proof (cases "(distinct_fst (butlast (e#es))) \<and> (distinct_snd (butlast (e#es)))")
+  case True
+  then show ?thesis by simp  
+next
+  case False
+  then show ?thesis
+  proof (induction rule:rev_induct)
+    case Nil
+    then show ?case by simp
+  next
+    case (snoc e es)
+    then have "trim_rev (es@ [e]) = trim_rev es"
+      using snoc_eq_iff_butlast trim_rev.elims
+      by (metis (no_types, opaque_lifting))   
+    then show ?case using False snoc
+      using set_append subset_trans sup.cobounded1 trim_rev.elims
+      by (smt (verit, del_insts))    
+  qed
+qed
 
-lemma trim_nonempty: "p \<noteq> [] \<Longrightarrow> trim p \<noteq> []"
+lemma distinct_arc_distinct_vert:
+  assumes "distinct (e#es) = False"
+  shows "distinct_fst ((e#es)) = False"
+proof -
+  have "distinct (map fst (e#es)) = False"
+    using assms distinct_zipI1 zip_map_fst_snd 
+    by metis
+  then show ?thesis by simp
+qed
+
+lemma distinct_fst_sublist:
+  assumes "distinct_fst (a@b@c)"
+  shows "distinct_fst b"
+proof -
+  have "distinct (map fst (a@b@c))"
+    using assms by simp
+  have "distinct (map fst b)"
+  proof (rule ccontr)
+    assume assm:"\<not>(distinct (map fst b))"
+    then have "\<exists>i j. i < length b \<and> j < length b \<and> fst(b!i) = fst (b!j) \<and> i \<noteq> j"
+      using distinct_conv_nth by fastforce  
+    then obtain i j where ij_def:"i < length b \<and> j < length b \<and> fst(b!i) = fst (b!j) \<and> i \<noteq> j"
+      by metis
+    then have "\<exists>k. ((a@b@c)!k) = b!i"
+      using nth_append nth_append_length_plus
+      by metis
+    moreover have "\<exists>k. ((a@b@c)!k) = b!j"
+      using nth_append nth_append_length_plus ij_def
+      by metis
+    ultimately have "\<exists>k1 k2. k1 < length (a@b@c) \<and> k2 < length (a@b@c) \<and>
+      fst((a@b@c)!k1) = fst ((a@b@c)!k2) \<and> k1 \<noteq> k2"
+      using ij_def append_eq_conv_conj nth_append_length_plus nth_take
+      using \<open>distinct (map fst (a @ b @ c))\<close> assm 
+      by fastforce      
+    then have "\<not>(distinct_fst (a@b@c))"
+      using distinct_fst.simps length_map nth_eq_iff_index_eq nth_map
+      by (metis (mono_tags, lifting) ) 
+    then show False using assms by simp
+  qed
+  then show ?thesis by simp
+qed
+
+lemma distinct_snd_sublist:
+  assumes "distinct_snd (a@b@c)"
+  shows "distinct_snd (a@c)"
+proof -
+  have "distinct (map snd (a@b@c))"
+    using assms by simp
+  have "distinct (map snd (a@c))"
+  proof (rule ccontr)
+    assume assm:"\<not>(distinct (map snd (a@c)))"
+    then have "\<exists>i j. i < length (a@c) \<and> j < length (a@c) \<and> 
+      snd((a@c)!i) = snd ((a@c)!j) \<and> i \<noteq> j"
+      using distinct_conv_nth length_map nth_map
+      by (metis (mono_tags, lifting) )
+    then obtain i j where ij_def:"i < length (a@c) \<and> j < length (a@c) \<and> 
+      snd((a@c)!i) = snd ((a@c)!j) \<and> i \<noteq> j"
+      by metis
+    then obtain f g where fg_def:"f = ((a@c)!i) \<and> g =((a@c)!j)"
+      by simp
+    then have "snd f = snd g"
+      using ij_def by simp
+    then have "\<exists>k1. ((a@b@c)!k1) = (a@c)!i"
+      using nth_append nth_append_length_plus
+      by metis
+    then obtain k1 where k1_def:"((a@b@c)!k1) = (a@c)!i"
+      by auto
+    have "\<exists>k2. ((a@b@c)!k2) = (a@c)!j"
+      using nth_append nth_append_length_plus ij_def
+      by metis
+    then obtain k2 where k2_def:"((a@b@c)!k2) = (a@c)!j"
+      by auto
+    then have "k1 \<noteq> k2"
+      sorry
+    then have "\<not>(distinct_snd (a@b@c))"
+      using k1_def k2_def ij_def distinct_snd.simps 
+      sorry
+    then show False using assms by simp
+  qed
+  then show ?thesis by simp
+qed
+      
+      
+
+lemma trim_nonempty: "p \<noteq> []\<Longrightarrow> trim p \<noteq> []"
 proof (induction p)
   case Nil
   then show ?case by simp
 next
   case (Cons a p)
   then show ?case
-  proof (cases "distinct p")
+  proof (cases "(distinct_fst p) \<and> (distinct_snd p)")
     case True
     then show ?thesis by simp
   next
@@ -266,20 +405,327 @@ next
   qed
 qed
 
-lemma trim_cyc_nonempty:
-  assumes "p \<noteq> []" 
-  shows"trim_cyclical_path p \<noteq> []"
-proof -
-  have "trim p \<noteq> []"
-    using assms trim_nonempty
-    by metis
-  then have "rev (trim p) \<noteq> []"
-    using rev_nonempty_induct
-    by simp
-  then show ?thesis
-    using trim_nonempty
-    by auto
+lemma trim_rev_nonempty: "p \<noteq> []\<Longrightarrow> trim_rev p \<noteq> []"
+proof (induction p rule:rev_induct)
+  case Nil
+  then show ?case by simp
+next
+  case (snoc a p)
+  then show ?case
+  proof (cases "(distinct_fst (p)) \<and> (distinct_snd (p))")
+    case True
+    then have "trim_rev (p@[a]) = (p@[a])"
+      using trim_rev.simps(2) butlast.simps  butlast_snoc trim_rev.elims
+      by (smt (verit, ccfv_threshold))         
+    then show ?thesis by simp
+  next
+    case False
+    then have "trim_rev p \<noteq> []"
+      using snoc.IH by fastforce
+    moreover have "trim_rev (p@[a]) = trim_rev(p)"
+      using False butlast_snoc trim_rev.elims snoc.prems
+      by (smt (verit, best) )
+    ultimately show ?thesis by simp
+  qed
 qed
+
+lemma trim_preserves_last:
+  "last x = last (trim x)"
+proof (induction x)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a x)
+  then show ?case 
+  proof (cases "(distinct_fst x) \<and> (distinct_snd x)")
+    case True
+    then have "trim (a#x) = (a#x)"
+      using trim.cases
+      by simp
+    then show ?thesis by simp
+  next
+    case False
+    then have "trim (a#x) = trim x"
+      using trim.cases
+      by force
+    then have "last (trim (a#x)) = last x"
+      using Cons
+      by simp
+    then show ?thesis 
+      using last_def
+      by auto
+  qed
+qed
+
+lemma trim_path_path:
+  "path G x \<longrightarrow> path G (trim x)"
+proof (induction x rule:trim.induct)
+  case 1
+  then show ?case by simp
+next
+  case (2 e es)
+  then show ?case
+  proof (cases "distinct_fst es \<and> distinct_snd es")
+    case True
+    then have "trim (e#es) = e#es"
+      by simp
+    then show ?thesis by simp
+  next
+    case False
+    then have "trim (e#es) = trim es"
+      by auto
+    moreover have "path G (e#es) \<longrightarrow> path G es"
+      using tail_of_path_is_path
+      by metis
+    ultimately show ?thesis using 2 False by simp
+  qed 
+qed
+
+lemma trim_rev_path_path:
+  "path G x \<longrightarrow> path G (trim_rev x)"
+proof (induction x rule:trim_rev.induct)
+  case 1
+  then show ?case by simp
+next
+  case (2 e es)
+  then show ?case
+  proof (cases "distinct_fst (butlast(e#es)) \<and> distinct_snd (butlast(e#es))")
+    case True
+    then have "trim_rev (e#es) = e#es"
+      by simp
+    then show ?thesis by simp
+  next
+    case False
+    then have "trim_rev (e#es) = trim_rev (butlast (e#es))"
+      using trim_rev.simps(2)
+      by metis     
+    moreover have "path G (e#es) \<longrightarrow> path G (butlast (e#es))"
+      
+    ultimately show ?thesis using 2 False by simp
+  qed 
+qed
+
+lemma trim_nearly_distinct:
+  "(e#es) = trim x \<longrightarrow> (distinct_fst es) \<and>  (distinct_snd es)"
+proof (induction x arbitrary:e es)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons e es)
+  then show ?case by simp
+qed
+
+lemma trim_rev_nearly_distinct:
+  "(e#es) = trim_rev x \<longrightarrow> (distinct_fst (butlast (e#es))) 
+    \<and>  (distinct_snd (butlast (e#es)))"
+proof (induction x arbitrary:e es rule:rev_induct)
+  case Nil
+  then show ?case by simp
+next
+  case (snoc e es)
+  then show ?case
+    using append_Nil2 butlast.simps(2) butlast_append list.distinct(1) trim_rev.elims
+    by (smt (verit) )
+qed
+
+lemma trim_not_distinct:
+  assumes "\<not>((distinct_fst z) \<and>  (distinct_snd z))"
+  shows "\<not>((distinct_fst (trim z)) \<and> (distinct_snd (trim z)))"
+  using assms
+proof (induction z)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons e es)
+  show ?case
+  proof (cases "(distinct_fst es) \<and> (distinct_snd es)" )
+    case True
+    then have "trim (e # es) = e # es" by simp
+    moreover have "\<not>((distinct_fst (e#es)) \<and> (distinct_snd (e#es)))"
+      using Cons.prems True by simp
+    ultimately show ?thesis by simp
+  next
+    case False     
+    then have "\<not>((distinct_fst (es)) \<and> (distinct_snd (es)))" 
+      using False 
+      by simp 
+    then have "\<not>(distinct_fst (es)) \<or>
+      \<not>(distinct_snd (es))"
+      by metis
+    then show ?thesis 
+      using Cons
+      by auto
+  qed
+qed
+
+lemma trim_rev_not_distinct:
+  assumes "\<not>((distinct_fst z) \<and>  (distinct_snd z))"
+  shows "\<not>((distinct_fst (trim_rev z)) \<and> (distinct_snd (trim_rev z)))"
+  using assms
+proof (induction z rule:rev_induct)
+  case Nil
+  then show ?case by simp
+next
+  case (snoc e es)
+  show ?case
+  proof (cases "(distinct_fst es) \<and> (distinct_snd es)" )
+    case True
+    then have "trim (e # es) = e # es" by simp
+    moreover have "\<not>((distinct_fst (e#es)) \<and> (distinct_snd (e#es)))"
+      using snoc.prems True by simp
+    ultimately show ?thesis
+      using True snoc.prems snoc_eq_iff_butlast trim_rev.elims
+      by (metis (no_types, lifting) ) 
+  next
+    case False     
+    then have "\<not>((distinct_fst (es)) \<and> (distinct_snd (es)))" 
+      using False 
+      by simp 
+    then have "\<not>(distinct_fst (es)) \<or>
+      \<not>(distinct_snd (es))"
+      by metis
+    then show ?thesis 
+      using snoc butlast_snoc trim_rev.elims
+      by (smt (verit, best))      
+  qed
+qed
+
+lemma trim_rev_trim_near_distinct:
+  assumes "\<not>((distinct_fst (z)) \<and>  (distinct_snd (z)))"
+  assumes "(distinct_fst (butfirst(z))) \<and>  (distinct_snd (butfirst(z)))"
+  shows "(distinct_fst (butfirst (trim_rev (z)))) 
+    \<and> (distinct_snd (butfirst (trim_rev (z))))"
+  using assms
+proof (induction z rule:rev_induct)
+  case Nil
+  then show ?case by simp
+next
+  case (snoc e es)
+  then show ?case
+  proof (cases "(distinct_fst es) \<and> (distinct_snd es)" )
+    case True
+    then have "\<not>((distinct_fst (e#es)) \<and> (distinct_snd (e#es)))"
+      using snoc.prems True by simp
+    then show ?thesis
+      using True snoc.prems snoc_eq_iff_butlast trim_rev.elims
+      by (metis (no_types, lifting) ) 
+  next
+    case False     
+    then have "\<not>((distinct_fst (es)) \<and> (distinct_snd (es)))" 
+      using False 
+      by simp 
+    then have "trim_rev (es@[e]) = trim_rev es"
+      using snoc_eq_iff_butlast trim_rev.elims
+      by (metis (mono_tags, lifting))
+    then show ?thesis 
+      using snoc False append_Nil append_Nil2 butfirst.simps(2) 
+        distinct_fst_sublist distinct_snd_sublist hd_Cons_tl tl_append2
+      by metis           
+  qed
+qed
+
+lemma trim_cyc_subset: 
+  assumes "\<not>(distinct_fst p \<and> distinct_snd p)"
+  shows "set (trim_cyclical_path p) \<subseteq> set p"
+proof -
+  have initial:"set (trim_rev(trim p)) \<subseteq> set p"
+    using trim_subset trim_rev_subset dual_order.trans subsetI
+      trim.simps(1) trim_cyclical_path.cases trim_rev.simps(1)
+    by (metis (no_types, opaque_lifting))    
+  have p_not_empty: "p\<noteq>[]"
+    using distinct_fst.simps distinct_snd.simps assms
+    by auto
+  then obtain e es where ees_def:"(e#es) = trim p"
+    using trim_cyclical_path.cases trim_nonempty
+    by metis
+  then obtain f fs where ffs_def:"(f#fs) = trim_rev (trim p)"
+    using trim_cyclical_path.cases  trim_rev_nonempty 
+    by metis
+  have "\<not>(distinct_fst (e#es) \<and> distinct_snd (e#es))"
+    using trim_not_distinct assms ees_def 
+    by metis
+  then have near_distinct:"\<not>(distinct_fst (f#fs) \<and> distinct_snd (f#fs))"
+    using ees_def ffs_def trim_rev_not_distinct
+    by metis
+  then show ?thesis 
+  proof (cases "\<not>(distinct_fst (f#fs))")
+    case True
+    then have "trim_cyclical_path p = butlast (f#fs)"
+      using trim_cyclical_path.elims ffs_def p_not_empty
+      by metis    
+    then show ?thesis 
+      using initial ffs_def butlast.simps in_set_butlastD
+      by fastforce
+  next
+    case False
+    then have "\<not>(distinct_snd (f#fs))"
+      using near_distinct
+      by simp
+    then have "trim_cyclical_path p = butfirst (f#fs)"
+      using trim_cyclical_path.elims ffs_def p_not_empty False
+      by metis       
+    then show ?thesis 
+      using initial ffs_def dual_order.trans set_subset_Cons butfirst.simps(2)
+      by metis
+  qed
+qed 
+
+
+    
+lemma trim_cyc_distinct_unfinished:
+  assumes "distinct x = False"
+  shows "distinct_fst (trim_cyclical_path x) \<and> 
+    distinct_snd (trim_cyclical_path x)"
+proof -
+  obtain a ay where aay_def:"x = a#ay"
+    using assms distinct.simps(1) list.exhaust
+    by metis
+  then obtain c cy where ccy_def:"c#cy = (trim (a#ay))"
+    using trim_nonempty butfirst.elims
+    by metis
+  then obtain e ey where eey_def:"e#ey = trim_rev (c#cy)"
+    using trim_rev_nonempty butfirst.elims
+    by metis
+  then show ?thesis
+  proof (cases "distinct_fst(e#ey)")
+    case True
+    have "distinct_fst (butfirst (c#cy)) \<and> distinct_snd (butfirst (c#cy))"
+      using aay_def ccy_def trim_nearly_distinct butfirst.simps(2)
+      by metis
+    moreover have "\<not>(distinct_fst (c#cy) \<and> distinct_snd (c#cy))"
+      using ccy_def aay_def trim_not_distinct assms distinct_arc_distinct_vert
+      by metis
+    ultimately have "distinct_fst (butfirst (e#ey)) \<and> distinct_snd ((butfirst (e#ey)))"
+      using eey_def ccy_def trim_rev_trim_near_distinct
+      by metis
+    moreover have "(trim_cyclical_path x) = butfirst (e#ey)"
+      using trim_cyclical_path.simps eey_def ccy_def aay_def True
+      by simp
+    ultimately show ?thesis 
+      by simp
+  next
+    case False
+    then have "distinct_fst (butlast (e#ey)) \<and> distinct_snd ((butlast (e#ey)))"
+      using eey_def trim_rev_nearly_distinct
+      by metis
+    moreover have "(trim_cyclical_path x) = butlast (e#ey)"
+      using trim_cyclical_path.simps eey_def ccy_def aay_def False
+      by simp
+    ultimately show ?thesis 
+      by simp
+  qed
+qed
+ 
+lemma trim_cyc_cycle:
+  assumes "(a#as) = trim_cyclical_path x"
+  shows "fst a = snd (last (a#as))"
+proof -
+  obtain e es where "(if \<not>(distinct_fst(trim_rev(trim (e#es)))) 
+    then butlast (trim_rev(trim (e#es))) 
+    else butfirst(trim_rev(trim (e#es)))) = a#as"
+    using assms list.discI trim_cyclical_path.elims
+    by (metis )
+
 
 lemma trim_head_away:
   assumes "distinct (e#es) = False"
@@ -293,19 +739,30 @@ proof -
   then have "distinct es = False"
     using assms(1)
     by simp
+  then have 1:"distinct_fst es = False"
+    using distinct_arc_distinct_vert distinct.simps(1) trim.elims
+    by metis   
   then have "trim (e#es) = trim (es)"
     by simp
-  then have headless:"trim_cyclical_path (e#es) = trim (rev (trim es))"
-    by simp
-  have "set (trim (rev (trim es))) \<subseteq> set es"
-    using trim_cyc_subset
-    by fastforce
-  then have "set(trim_cyclical_path(e#es)) \<subseteq> set es"
-    using headless
-    by simp
-  then show ?thesis
-    using assms(2)
+  then have "set(trim(e#es))\<subseteq>set(es)"
+    using trim_subset trim.elims trim_nonempty
+    by (metis (full_types))
+  then have subset: "set(trim_rev(trim(e#es)))\<subseteq>set es"
+    using trim_rev_subset dual_order.trans trim_rev.elims
+    by (metis (no_types, lifting))
+  have "\<not>(distinct_fst(trim(e#es))\<and>distinct_snd(trim(e#es)))"
+    using trim_not_distinct 1
     by auto
+  then have "trim_cyclical_path(e#es) = butfirst (trim_rev(trim(e#es))) \<or>
+    trim_cyclical_path(e#es) = butlast (trim_rev(trim(e#es)))"
+    using trim_cyclical_path.simps(2)
+    by metis
+  moreover have notempty:"(trim(rev(trim(e#es)))) \<noteq> []"
+    using Nil_is_rev_conv assms(1) distinct.simps(1) trim_nonempty
+    by metis
+  ultimately show ?thesis
+    using Int_mono \<open>e \<notin> set es\<close> assms(1) assms(2) bot.extremum_uniqueI butfirst.elims distinct_arc_distinct_vert dual_order.eq_iff in_mono in_set_butlastD list.set_intros(2) list.simps(15) subset subset_insert_iff trim_cyc_subset
+    by (smt (verit, ccfv_SIG))
 qed
 
 lemma no_in_arcs_no_head:
@@ -336,7 +793,8 @@ proof -
     then show ?thesis 
     proof -
       have "set (trim_cyclical_path (e # es)) \<subseteq> set (e # es)"
-        by (meson trim_cyc_subset)
+        using trim_cyc_subset distinct_arc_distinct_vert non_distinct
+        by blast
       then show ?thesis
         using total_not_inter
         by blast
@@ -344,19 +802,25 @@ proof -
   qed
 qed  
 
-text \<open>These are just helpful for proofs\<close>
+subsection \<open>All Simple Cycles\<close>
 
-definition all_simple_cycles::"('a, 'b) pre_digraph \<Rightarrow> 'b awalk set" where
+definition all_simple_cycles::"('a, ('a\<times>'a)) pre_digraph \<Rightarrow> ('a\<times>'a) awalk set" where
 "all_simple_cycles G =  trim_cyclical_path ` (get_cyclical_walks G)"
 
-definition all_arcs_in_cycles::"('a, 'b) pre_digraph \<Rightarrow> 'b set" where
+definition all_arcs_in_cycles::"('a, ('a\<times>'a)) pre_digraph \<Rightarrow> ('a\<times>'a) set" where
 "all_arcs_in_cycles G = \<Union> (set ` (all_simple_cycles G))"
 
 lemma cyc_arc_still_arc: "all_arcs_in_cycles G \<subseteq> arcs G"
 proof -
-  have 1:"\<forall>x\<in>all_simple_cycles G. \<exists>y\<in>get_cyclical_walks G. set x \<subseteq> set y"
+  have "\<forall>x\<in>get_cyclical_walks G. \<not>distinct x"
+    using get_cyclical_walks.simps
+    by simp
+  then have "\<forall>x\<in>get_cyclical_walks G. \<not>(distinct_fst x \<and> distinct_snd x)"
+    using distinct.simps(1) distinct_arc_distinct_vert list.exhaust
+    by metis 
+  then have 1:"\<forall>x\<in>all_simple_cycles G. \<exists>y\<in>get_cyclical_walks G. set x \<subseteq> set y"
     using trim_cyc_subset all_simple_cycles_def image_iff
-    by metis
+    by (metis (mono_tags, opaque_lifting))
   have 2:"\<forall>y\<in>get_cyclical_walks G. set y \<subseteq> arcs G"
     using getCyclicalWalks_in_arcs
     by metis
@@ -372,7 +836,7 @@ lemma less_paths_less_cycles:
   by metis
 
                                 
-text \<open>These currently get used in the implementation. 
+text \<open>These currently don't get used in the implementation. 
   WARNING: Only call get_single_cycle if you know cycle_exists G, 
   otherwise an error will be thrown.\<close>
 
@@ -469,9 +933,16 @@ shows "set (get_simple_cycle G) \<subseteq> arcs G"
 proof (rule subsetI)
   fix x
   assume x_in_cycle:"x \<in> set (get_simple_cycle G)"
-  have simple_in_single:"set (get_simple_cycle G) \<subseteq> set (get_single_cycle G)"
-    using trim_cyc_subset
+  have "\<forall>x\<in>get_cyclical_walks G. \<not>distinct x"
+    using get_cyclical_walks.simps
     by simp
+  then have "\<forall>x\<in>get_cyclical_walks G. \<not>(distinct_fst x \<and>distinct_snd x)"
+    using distinct_arc_distinct_vert distinct.simps(1) list.exhaust
+    by metis
+  have simple_in_single:"set (get_simple_cycle G) \<subseteq> set (get_single_cycle G)"
+    using trim_cyc_subset cycle distinct_arc_distinct_vert get_simple_cycle.simps 
+      single_cycle_non_distinct single_cycle_non_empty trim_cyclical_path.cases
+    by metis     
   then have single_in_arcs:"set (get_single_cycle G) \<subseteq> arcs G"
     using single_cycle_in_arcs cycle
     by simp
@@ -496,12 +967,16 @@ proof -
     using get_cyclical_walks.simps
     by simp
   then have "\<forall>x\<in>all_simple_cycles G. set x \<inter> out_arcs G c = {}"
-    using  no_in_arcs_no_head assms empty_set inf_bot_right inf_commute path.elims(2) subset_empty trim_cyc_subset
+    using  no_in_arcs_no_head assms empty_set inf_bot_right subset_empty
+    inf_commute path.elims(2) trim_cyc_subset trim_cyclical_path.elims
     by (smt (verit))
   then show ?thesis
     using all_arcs_in_cycles_def Union_disjoint image_iff
     by (smt (verit, best))
 qed
+
+
+
 
 
 end
