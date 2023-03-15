@@ -10,8 +10,9 @@ begin
 
 section \<open>Additional theorems for Graphs\<close>
 
-type_synonym 'a Margin_Graph = "('a, ('a\<times>'a)) pre_digraph"
 type_synonym 'a Weight_Function = "'a set \<Rightarrow> 'a Profile \<Rightarrow> ('a*'a) \<Rightarrow> nat"
+
+type_synonym 'a Margin_Graph = "('a, ('a\<times>'a)) pre_digraph"
 
 subsection \<open>Finding Cycles\<close>
 
@@ -74,27 +75,6 @@ next
   qed
 qed
 
-lemma rev_tail_of_path_is_path:
-  assumes "path G (e # es)"
-  shows "path G (butlast (e#es))"
-proof -
-  show ?thesis
-    using assms
-  proof (cases "butlast (e#es) = []")
-    case True
-    then have is_empty:"butlast (e#es) = []" by metis
-    have empty_good:"path G []"
-      by simp
-    thus "path G (butlast (e#es))" 
-      using is_empty empty_good by metis
-next
-  case False
-  then have "path G (e # es)" using assms by simp
-  then show "path G (butlast (e#es))" 
-    using path.simps(3) False path.elims butlast.simps
-    sorry
-  qed
-qed
 
 lemma path_in_graph: 
   shows "path G walk \<longrightarrow> set walk \<subseteq> arcs G"
@@ -361,25 +341,37 @@ proof -
     then obtain i j where ij_def:"i < length (a@c) \<and> j < length (a@c) \<and> 
       snd((a@c)!i) = snd ((a@c)!j) \<and> i \<noteq> j"
       by metis
-    then obtain f g where fg_def:"f = ((a@c)!i) \<and> g =((a@c)!j)"
-      by simp
-    then have "snd f = snd g"
-      using ij_def by simp
-    then have "\<exists>k1. ((a@b@c)!k1) = (a@c)!i"
-      using nth_append nth_append_length_plus
-      by metis
-    then obtain k1 where k1_def:"((a@b@c)!k1) = (a@c)!i"
-      by auto
-    have "\<exists>k2. ((a@b@c)!k2) = (a@c)!j"
-      using nth_append nth_append_length_plus ij_def
-      by metis
-    then obtain k2 where k2_def:"((a@b@c)!k2) = (a@c)!j"
-      by auto
+    then have "(if i < length a then (a@b@c)!i = (a@c)!i 
+      else (a@c)!i = (a@b@c)!(i + length b))" 
+      using add_diff_cancel_right add_less_cancel_right append.assoc length_append nth_append
+      by (metis (no_types, lifting) )
+    then obtain k1 where k1_define:"(if i < length a then k1 = i 
+      else k1 = (i + length b)) \<and> (a@b@c)!k1 = (a@c)!i"
+      by presburger
+    then have "(if j < length a then (a@b@c)!j = (a@c)!j 
+      else (a@c)!j = (a@b@c)!(j + length b))" 
+      using add_diff_cancel_right add_less_cancel_right append.assoc 
+        length_append nth_append
+      by (metis (no_types, lifting) )
+    then obtain k2 where k2_def:"(if j < length a then k2 = j 
+      else k2 = (j + length b)) \<and> (a@b@c)!k2 = (a@c)!j"
+      by presburger
     then have "k1 \<noteq> k2"
-      sorry
+      using k1_define ij_def
+      by (metis add_lessD1 add_right_cancel)
+    moreover have "snd((a@b@c)!k2) = snd ((a@b@c)!k1)"
+      using k1_define k2_def ij_def
+      by simp
+    moreover have "k1 < length (a@b@c) \<and> k2 < length (a@b@c)"
+      using k1_define k2_def ij_def add.commute add.left_commute 
+        length_append nat_add_left_cancel_less trans_less_add1
+      by (smt (verit) )
+    ultimately have "\<exists>k1 k2. k1\<noteq>k2 \<and> snd((a@b@c)!k2) = snd ((a@b@c)!k1)
+      \<and> k1 < length (a@b@c) \<and> k2 < length (a@b@c)"
+      by auto
     then have "\<not>(distinct_snd (a@b@c))"
-      using k1_def k2_def ij_def distinct_snd.simps 
-      sorry
+      using distinct_snd.simps length_map nth_eq_iff_index_eq nth_map
+      by (metis (full_types))       
     then show False using assms by simp
   qed
   then show ?thesis by simp
@@ -477,30 +469,6 @@ next
     moreover have "path G (e#es) \<longrightarrow> path G es"
       using tail_of_path_is_path
       by metis
-    ultimately show ?thesis using 2 False by simp
-  qed 
-qed
-
-lemma trim_rev_path_path:
-  "path G x \<longrightarrow> path G (trim_rev x)"
-proof (induction x rule:trim_rev.induct)
-  case 1
-  then show ?case by simp
-next
-  case (2 e es)
-  then show ?case
-  proof (cases "distinct_fst (butlast(e#es)) \<and> distinct_snd (butlast(e#es))")
-    case True
-    then have "trim_rev (e#es) = e#es"
-      by simp
-    then show ?thesis by simp
-  next
-    case False
-    then have "trim_rev (e#es) = trim_rev (butlast (e#es))"
-      using trim_rev.simps(2)
-      by metis     
-    moreover have "path G (e#es) \<longrightarrow> path G (butlast (e#es))"
-      sorry
     ultimately show ?thesis using 2 False by simp
   qed 
 qed
@@ -672,7 +640,7 @@ qed
 
 
     
-lemma trim_cyc_distinct_unfinished:
+lemma trim_cyc_distinct:
   assumes "distinct x = False"
   shows "distinct_fst (trim_cyclical_path x) \<and> 
     distinct_snd (trim_cyclical_path x)"
@@ -714,81 +682,7 @@ proof -
     ultimately show ?thesis 
       by simp
   qed
-qed
- 
-lemma trim_cyc_cycle:
-  assumes "x\<in>get_cyclical_walks G"
-  assumes "tail G = fst \<and> head G = snd"
-  assumes "(a#as) = trim_cyclical_path x"
-  shows "fst a = snd (last (a#as))"
-proof -
-  obtain e es where ees_def:"e#es = x"
-    using assms(3) trim_cyclical_path.elims
-    by metis
-  then obtain f fs where ffs_def:"f#fs = trim_rev(trim (e#es))"
-    using trim_nonempty trim_rev_nonempty butfirst.elims
-    by metis
-  have "path G x"
-    using assms(1) by simp
-  then have still_path:"path G (f#fs)"
-    using trim_path_path trim_rev_path_path ees_def ffs_def
-    by metis
-  have "\<not>(distinct x)" 
-    using assms(1) by simp
-  then have "\<not>(distinct_fst (x) \<and> distinct_snd (x))"
-    using distinct_arc_distinct_vert distinct.simps(1) trim.elims
-    by metis
-  then have trim_dis:"\<not>(distinct_fst (trim x) \<and> distinct_snd (trim x))"
-    using trim_not_distinct
-    by metis
-  then have not_distinct:"\<not>(distinct_fst (f#fs) \<and> distinct_snd (f#fs))"
-    using trim_rev_not_distinct ffs_def ees_def
-    by simp
-  have butfirst_distinct:"(distinct_fst (butfirst(f#fs)) 
-    \<and> distinct_snd (butfirst(f#fs)))"
-    using ees_def ffs_def trim_rev_trim_near_distinct
-    trim_dis butfirst.simps(2) neq_Nil_conv trim_nearly_distinct trim_nonempty
-    by (metis (mono_tags, opaque_lifting))
-  have butlast_distinct:"(distinct_fst (butlast(f#fs)) 
-    \<and> distinct_snd (butlast(f#fs)))"
-    using trim_rev_nearly_distinct ffs_def
-    by metis
-  then show ?thesis
-  proof (cases "\<not>(distinct_fst (f#fs))")
-    case True
-    then have "\<exists>i j. i < length (f#fs) \<and> j < length (f#fs) \<and>
-      fst((f#fs)!i) = fst((f#fs)!j) \<and> i \<noteq> j"
-      using distinct_fst.simps distinct_conv_nth length_map nth_map
-      by (metis (mono_tags, lifting))
-    then obtain i j where ij_def:"i < length (f#fs) \<and> j < length (f#fs) \<and>
-      fst((f#fs)!i) = fst((f#fs)!j) \<and> i < j"
-      using nat_neq_iff
-      by metis      
-    have "distinct_fst (butfirst (f#fs))"
-      using butfirst_distinct
-      by simp
-    then have "\<nexists>k1 k2. k1 < length (butfirst (f#fs)) \<and> k2 < length (butfirst (f#fs)) \<and>
-      fst((butfirst (f#fs))!k1) = fst((butfirst (f#fs))!k2) \<and> k1 \<noteq> k2"
-      using distinct_fst.simps distinct_conv_nth length_map nth_map
-      by (metis (mono_tags, lifting))
-    then have key:"fst f = fst (last (f#fs))"
-      using True distinct_fst.simps
-      sorry
-    then have "(a#as) = butlast(f#fs)"
-      using assms True ffs_def ees_def trim_cyclical_path.simps(2)
-      by metis
-    moreover have "snd (last (butlast(f#fs))) = fst (last (f#fs))"
-      using assms(2) still_path path.simps path.elims
-      sorry
-    ultimately show ?thesis 
-      using key butlast.simps(2) list.discI nth_Cons_0
-      by metis       
-  next
-    case False
-    then show ?thesis sorry
-  qed
-qed   
-    
+qed  
 
 lemma trim_head_away:
   assumes "distinct (e#es) = False"
@@ -897,6 +791,21 @@ lemma less_paths_less_cycles:
   shows "all_arcs_in_cycles H \<subseteq> all_arcs_in_cycles G"
   using all_arcs_in_cycles_def all_simple_cycles_def assms Union_mono image_mono
   by metis
+
+lemma simple_cycle_distinct:
+  assumes "x\<in>all_simple_cycles G"
+  shows "distinct_fst x \<and> distinct_snd x"
+proof -
+  obtain w where w_def:"w\<in>get_cyclical_walks G \<and> trim_cyclical_path w = x"
+    using assms all_simple_cycles_def image_iff
+    by metis 
+  then have "\<not>(distinct w)"
+    by simp
+  then show ?thesis
+    using trim_cyc_distinct w_def assms
+    by metis
+qed
+
 
                                 
 text \<open>These currently don't get used in the implementation. 

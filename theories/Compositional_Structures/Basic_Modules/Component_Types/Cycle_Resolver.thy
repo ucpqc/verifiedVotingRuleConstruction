@@ -11,25 +11,12 @@ text\<open>
 type_synonym 'a Cycle_Resolver = 
 "'a Margin_Graph \<Rightarrow> 'a Weight_Function \<Rightarrow> 'a Profile \<Rightarrow>'a Margin_Graph"
 
+
 subsection \<open>Finding the arc with the smallest weight in a cycle\<close>
 
 text\<open>
   This function serves to find the elements in a list with minimum weight
 \<close>
-(*
-function testmin :: "nat set \<Rightarrow> nat list \<Rightarrow> nat set" where
-"testmin a [] = a" |
-"testmin {} (x#xs) = testmin {x} xs" |
-"testmin a (x#xs) = (if (x < (SOME y. y\<in> a)) then testmin {x} xs
-   else (if (x = (SOME y. y\<in> a)) then testmin (a \<union> {x}) xs else testmin a xs))"
-  apply (metis list_encode.cases old.prod.exhaust)
-  apply simp
-  apply simp
-apply simp
-apply simp
-  apply simp
-   *)
-
 
 fun min_help :: "('a*'a) list \<Rightarrow>'a Weight_Function \<Rightarrow> 'a set 
   \<Rightarrow> 'a Profile  \<Rightarrow> ('a*'a) list \<Rightarrow> ('a*'a) set" where
@@ -148,7 +135,7 @@ next
       then have "min_help list f c p (a#cyc) = {a} \<union> min_help list f c p (cyc)"
         using assms
         by simp 
-      then show ?thesis sorry
+      then show ?thesis using x_in_set True by simp
     next
       case False
       then show ?thesis 
@@ -159,7 +146,6 @@ next
     case False
     then show ?thesis by simp
   qed
-
   have 2:"x\<in>min_help list f c p cyc \<longrightarrow> x\<in>min_help list f c p (a#cyc)"
   proof (cases "\<forall> y \<in> set list. f c p a \<le> f c p y")
     case True
@@ -173,11 +159,22 @@ next
       by auto
     then show ?thesis 
       by simp
-  qed
-  
+  qed  
   show " x\<in>set (a#cyc) \<longrightarrow> x\<in>min_help list f c p (a#cyc)"
-  
-  
+    using 1 2 
+    by simp
+qed
+
+lemma min_in_min_elems:
+  assumes "\<forall>y\<in>set list. f c p x \<le> f c p y"
+  shows "x\<in>set list\<longrightarrow>x\<in>min_elems f c p list"
+proof -
+  have "min_elems f c p list = min_help list f c p list"
+    by simp
+  moreover have "x\<in>set list\<longrightarrow>x\<in>min_help list f c p list"
+    using assms min_in_min_help by metis
+  ultimately show "x\<in>set list\<longrightarrow>x\<in>min_elems f c p list"
+    by simp
 qed
 
 lemma smallest_arcs_in_graph:

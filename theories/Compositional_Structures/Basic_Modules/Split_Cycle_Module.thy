@@ -208,75 +208,75 @@ lemma split_cycle_condorcet_consistent:"condorcet_consistency split_cycle"
 subsection \<open>Monotonicity\<close>
 
 lemma lift_starter:
-  assumes "lifted A p q a"
-  shows "\<forall> x \<in> A - {a}. card {i::nat. 
-    i < length p \<and> (let r = (p!i) in (a \<preceq>\<^sub>r x))} \<ge>
-    card {i::nat. i < length q \<and> (let r = (q!i) in (a \<preceq>\<^sub>r x))}"
+  assumes "lifted A p q w"
+  shows "\<forall> x \<in> A - {w}. card {i::nat. 
+    i < length p \<and> (let r = (p!i) in (w \<preceq>\<^sub>r x))} \<ge>
+    card {i::nat. i < length q \<and> (let r = (q!i) in (w \<preceq>\<^sub>r x))}"
 proof -
   have finite:"finite_profile A p \<and> finite_profile A q"
     using assms lifted_def
     by metis
   have 1:"(\<forall> i::nat.
-        (i < length p \<and> \<not>Preference_Relation.lifted A (p!i) (q!i) a) \<longrightarrow>
+        (i < length p \<and> \<not>Preference_Relation.lifted A (p!i) (q!i) w) \<longrightarrow>
           (p!i) = (q!i)) \<and>
-      (\<exists> i::nat. i < length p \<and> Preference_Relation.lifted A (p!i) (q!i) a)"
+      (\<exists> i::nat. i < length p \<and> Preference_Relation.lifted A (p!i) (q!i) w)"
     using assms lifted_def
     by metis
   then have "\<forall>i < length p.(p!i) = (q!i) \<or> (let r = p!i in let s = q!i in 
-    (\<forall> x \<in> A - {a}. \<not>(x \<preceq>\<^sub>r a \<and> a \<preceq>\<^sub>s x)))"
+    (\<forall> x \<in> A - {w}. \<not>(x \<preceq>\<^sub>r w \<and> w \<preceq>\<^sub>s x)))"
     using assms lifted_mono 
     by (metis (full_types))
   then have "\<forall>i < length p.(p!i) = (q!i) \<or> (let r = p!i in let s = q!i in 
-    (\<forall> x \<in> A - {a}. (a \<preceq>\<^sub>s x \<longrightarrow> a \<preceq>\<^sub>r x)))"
+    (\<forall> x \<in> A - {w}. (w \<preceq>\<^sub>s x \<longrightarrow> w \<preceq>\<^sub>r x)))"
     using 1 lifted_above pref_imp_in_above subsetD
     by (meson )
   then have "\<forall>i < length p.(let r = p!i in let s = q!i in 
-    (\<forall> x \<in> A - {a}. (a \<preceq>\<^sub>s x \<longrightarrow> a \<preceq>\<^sub>r x)))"
+    (\<forall> x \<in> A - {w}. (w \<preceq>\<^sub>s x \<longrightarrow> w \<preceq>\<^sub>r x)))"
     by metis
-  then have "\<forall> x \<in> A - {a}. {i::nat. 
-    i < length p \<and> (let r = (p!i) in (a \<preceq>\<^sub>r x))} \<supseteq>
-     {i::nat. i < length p \<and> (let r = (q!i) in (a \<preceq>\<^sub>r x))}"
+  then have "\<forall> x \<in> A - {w}. {i::nat. 
+    i < length p \<and> (let r = (p!i) in (w \<preceq>\<^sub>r x))} \<supseteq>
+     {i::nat. i < length p \<and> (let r = (q!i) in (w \<preceq>\<^sub>r x))}"
     by (simp add: Collect_mono_iff)
-  then have "\<forall> x \<in> A - {a}. card {i::nat. 
-    i < length p \<and> (let r = (p!i) in (a \<preceq>\<^sub>r x))} \<ge>
-     card {i::nat. i < length p \<and> (let r = (q!i) in (a \<preceq>\<^sub>r x))}"
+  then have "\<forall> x \<in> A - {w}. card {i::nat. 
+    i < length p \<and> (let r = (p!i) in (w \<preceq>\<^sub>r x))} \<ge>
+     card {i::nat. i < length p \<and> (let r = (q!i) in (w \<preceq>\<^sub>r x))}"
     using finite
   proof -
     { fix aa :: 'a
-      { assume "{n. n < length p \<and> a \<preceq>\<^sub>(q ! n) aa} \<subseteq> {n. n < length p \<and> a \<preceq>\<^sub>(p ! n) aa} \<and> finite {n. n < length p \<and> a \<preceq>\<^sub>(p ! n) aa}"
-        then have "aa \<notin> A - {a} \<or> card {n. n < length p \<and> a \<preceq>\<^sub>(q ! n) aa} \<le> card {n. n < length p \<and> a \<preceq>\<^sub>(p ! n) aa}"
+      { assume "{n. n < length p \<and> w \<preceq>\<^sub>(q ! n) aa} \<subseteq> {n. n < length p \<and> w \<preceq>\<^sub>(p ! n) aa} \<and> finite {n. n < length p \<and> w \<preceq>\<^sub>(p ! n) aa}"
+        then have "aa \<notin> A - {w} \<or> card {n. n < length p \<and> w \<preceq>\<^sub>(q ! n) aa} \<le> card {n. n < length p \<and> w \<preceq>\<^sub>(p ! n) aa}"
           using card_mono by blast }
-      then have "aa \<notin> A - {a} \<or> card {n. n < length p \<and> a \<preceq>\<^sub>(q ! n) aa} \<le> card {n. n < length p \<and> a \<preceq>\<^sub>(p ! n) aa}"
-        by (metis (lifting) \<open>\<forall>x\<in>A - {a}. {i. i < length p \<and> (let r = q ! i in a \<preceq>\<^sub>r x)} \<subseteq> {i. i < length p \<and> (let r = p ! i in a \<preceq>\<^sub>r x)}\<close> bounded_nat_set_is_finite mem_Collect_eq) }
+      then have "aa \<notin> A - {w} \<or> card {n. n < length p \<and> w \<preceq>\<^sub>(q ! n) aa} \<le> card {n. n < length p \<and> w \<preceq>\<^sub>(p ! n) aa}"
+        by (metis (lifting) \<open>\<forall>x\<in>A - {w}. {i. i < length p \<and> (let r = q ! i in w \<preceq>\<^sub>r x)} \<subseteq> {i. i < length p \<and> (let r = p ! i in w \<preceq>\<^sub>r x)}\<close> bounded_nat_set_is_finite mem_Collect_eq) }
     then show ?thesis
       by meson
   qed
   moreover have "length p = length q"
     using assms lifted_def
     by metis
-  ultimately show "\<forall> x \<in> A - {a}. card {i::nat. 
-    i < length p \<and> (let r = (p!i) in (a \<preceq>\<^sub>r x))} \<ge>
-    card {i::nat. i < length q \<and> (let r = (q!i) in (a \<preceq>\<^sub>r x))}"
+  ultimately show "\<forall> x \<in> A - {w}. card {i::nat. 
+    i < length p \<and> (let r = (p!i) in (w \<preceq>\<^sub>r x))} \<ge>
+    card {i::nat. i < length q \<and> (let r = (q!i) in (w \<preceq>\<^sub>r x))}"
     by simp 
 qed
 
 lemma lift_decreases_in_arc_weight:
-  assumes "lifted A p q a"
-  shows "\<forall>x\<in>A-{a}. mg_weight A q (x,a) \<le> mg_weight A p (x,a)"
+  assumes "lifted A p q w"
+  shows "\<forall>x\<in>A-{w}. mg_weight A q (x,w) \<le> mg_weight A p (x,w)"
 proof -
-  have "\<forall> x \<in> A - {a}. card {i::nat. 
-    i < length p \<and> (let r = (p!i) in (a \<preceq>\<^sub>r x))} \<ge>
-    card {i::nat. i < length q \<and> (let r = (q!i) in (a \<preceq>\<^sub>r x))}"
+  have "\<forall> x \<in> A - {w}. card {i::nat. 
+    i < length p \<and> (let r = (p!i) in (w \<preceq>\<^sub>r x))} \<ge>
+    card {i::nat. i < length q \<and> (let r = (q!i) in (w \<preceq>\<^sub>r x))}"
     using lift_starter assms
     by simp
-  then have "\<forall> x \<in> A - {a}. prefer_count p x a \<ge> prefer_count q x a"
+  then have "\<forall> x \<in> A - {w}. prefer_count p x w \<ge> prefer_count q x w"
     using prefer_count.simps
     by simp
-  moreover have "\<forall> x \<in> A - {a}. prefer_count p a x \<le> prefer_count q a x"
+  moreover have "\<forall> x \<in> A - {w}. prefer_count p w x \<le> prefer_count q w x"
     using DiffE Profile.lifted_def assms calculation diff_le_mono2 pref_count singleton_iff
     by (metis (no_types, lifting))    
-  ultimately have "\<forall> x \<in> A - {a}. prefer_count q x a - prefer_count q a x
-    \<le> prefer_count p x a - prefer_count p a x"
+  ultimately have "\<forall> x \<in> A - {w}. prefer_count q x w - prefer_count q w x
+    \<le> prefer_count p x w - prefer_count p w x"
     using diff_commute diff_diff_cancel diff_le_mono2 diff_le_self le_trans
     by (metis (full_types))
   then show ?thesis
@@ -530,26 +530,5 @@ proof-
     using split_cycle_sound monotonicity_def
     by (smt (verit, best))    
 qed
-
-subsection \<open>Other\<close>
-
-lemma "profile {} [{}] = True"
- unfolding profile_def all_set_conv_all_nth
-  by simp
-
-
-lemma "profile {0} [{(0,0)}] = True"
-  unfolding profile_def all_set_conv_all_nth
-  by simp
-
-
-lemma help11[simp]: "card {i. i = c \<and> x \<in> (s ! c)} = (if x\<in>(s ! c) then 1 else 0)"
-  by auto
-
-lemma help12[simp]: "{i. i = c \<and> x \<in> (s ! i)} = (if x\<in>(s ! c) then {c} else {})"
-  by auto
-
-
-  
 
 end
