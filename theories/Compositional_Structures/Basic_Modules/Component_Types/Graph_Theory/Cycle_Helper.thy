@@ -28,7 +28,7 @@ fun path ::"'a Margin_Graph \<Rightarrow> ('a\<times>'a) awalk \<Rightarrow> boo
 
 fun get_cyclical_walks::"'a Margin_Graph \<Rightarrow> ('a\<times>'a) awalk set" where
 "get_cyclical_walks G = {walk.(path G walk)\<and>
- (length walk \<le> card(verts G)) \<and> \<not>(distinct walk)}"
+ (length walk \<le> card(verts G) + 1) \<and> \<not>(distinct walk)}"
 
 fun cycle_exists::"'a Margin_Graph \<Rightarrow> bool" where
 "cycle_exists G = (get_cyclical_walks G  \<noteq> {})"
