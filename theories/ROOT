@@ -37,6 +37,9 @@ theories
   "Compositional_Structures/Basic_Modules/Component_Types/Maximum_Aggregator"
   "Compositional_Structures/Basic_Modules/Component_Types/Termination_Condition"
   "Compositional_Structures/Basic_Modules/Component_Types/Defer_Equal_Condition"
+  "Compositional_Structures/Basic_Modules/Component_Types/Margin_Graph_Creator"
+  "Compositional_Structures/Basic_Modules/Component_Types/Cycle_resolver"
+  "Compositional_Structures/Basic_Modules/Component_Types/Graph_Winner_Finder"
 (* "Basic Modules" *)
   "Compositional_Structures/Basic_Modules/Defer_Module"
   "Compositional_Structures/Basic_Modules/Drop_Module"
@@ -47,6 +50,7 @@ theories
   "Compositional_Structures/Basic_Modules/Condorcet_Module"
   "Compositional_Structures/Basic_Modules/Copeland_Module"
   "Compositional_Structures/Basic_Modules/Minimax_Module"
+  "Compositional_Structures/Basic_Modules/Split_Cycle_Module"
 (* "Compositional Structures" *)
   "Compositional_Structures/Drop_And_Pass_Compatibility"
   "Compositional_Structures/Revision_Composition"
@@ -66,6 +70,9 @@ theories
   "Classic_Nanson_Rule"
   "Schwartz_Rule"
   "Sequential_Majority_Comparison"
+  "Split_Cycle_Rule"
+(* "Other" *)
+  "Compositional_Structures/Basic_Modules/Component_Types/Graph_Theory/Cycle_Helper"
 
 document_files
     "root.tex"
