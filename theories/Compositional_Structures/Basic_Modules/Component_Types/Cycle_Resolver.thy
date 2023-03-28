@@ -1,21 +1,18 @@
-section \<open>Cycle_Resolver\<close>
+section \<open>Cycle Resolver\<close>
 
 theory Cycle_Resolver
   imports
           "Graph_Theory/Cycle_Helper"
 begin
 
-text\<open>
-\<close>
-
 type_synonym 'a Cycle_Resolver = 
 "'a Margin_Graph \<Rightarrow> 'a Weight_Function \<Rightarrow> 'a Profile \<Rightarrow>'a Margin_Graph"
 
 
-subsection \<open>Finding the arc with the smallest weight in a cycle\<close>
+subsection \<open>Finding the arc with the smallest weight in a cycle.\<close>
 
-text\<open>
-  This function serves to find the elements in a list with minimum weight
+text \<open>
+  This function serves to find the elements in a list with minimum weight.
 \<close>
 
 fun min_help :: "('a*'a) list \<Rightarrow>'a Weight_Function \<Rightarrow> 'a set 

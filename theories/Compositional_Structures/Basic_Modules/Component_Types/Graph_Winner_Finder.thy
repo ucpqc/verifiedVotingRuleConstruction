@@ -1,7 +1,7 @@
 section \<open>Graph-Winner-Finder\<close>
 
 theory Graph_Winner_Finder
-  imports "Graph_Theory.Digraph" 
+  imports "Graph_Theory/Cycle_Helper" 
           "Social_Choice_Types/Result"
 begin
 
@@ -10,15 +10,14 @@ text\<open>
   into one of three categories: winners, losers, and unknown/deferred.  
   It does this by determining each vertice's in- and out-degree, which is
   the number of arcs with said vertice as their head/tail.
-\<close>
 
-text\<open>
-  WARNING: It's important to use in_arcs = {} instead of in_degree = 0.
-  Same with out_degree. This is because in_degree and out_degree use card.
+  WARNING: It's important to use inarcs = {} instead of indegree = 0.
+  Same with outdegree. This is because indegree and outdegree use card.
   And using cardinality is a cardinal sin.
   It also causes the program to fail.
 \<close>
-type_synonym 'a Graph_Winner_Finder = "('a, ('a \<times> 'a)) pre_digraph \<Rightarrow> 'a Result"
+
+type_synonym 'a Graph_Winner_Finder = "'a Margin_Graph \<Rightarrow> 'a Result"
 
 fun get_winners::"('a,'b) pre_digraph \<Rightarrow> 'a set" where
 "get_winners G = {v::'a. v\<in>verts G \<and> in_arcs G v = {}}"

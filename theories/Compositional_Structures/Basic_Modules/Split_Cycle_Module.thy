@@ -5,12 +5,10 @@ theory Split_Cycle_Module
           "Component_Types/Margin_Graph_Creator"
           "Component_Types/Graph_Winner_Finder"
           "Component_Types/Cycle_Resolver"
-          Reject_Module
 begin
 
 text\<open>
   The Split Cycle Module uses several other modules to perform the split cycle voting rule.
-  It's made up of three Electoral Modules used sequentially.
 \<close>
 
 fun mg_weight::"'a Weight_Function" where
@@ -399,6 +397,7 @@ proof -
     by simp
 qed
 
+
 lemma lifted_in_arcs_min_arcs:
   assumes "(finite A \<and> w \<in> elect split_cycle A p \<and> lifted A p q w)"
   shows "in_arcs (create_margin_graph A q mg_weight) w 
@@ -530,5 +529,6 @@ proof-
     using split_cycle_sound monotonicity_def
     by (smt (verit, best))    
 qed
+
 
 end

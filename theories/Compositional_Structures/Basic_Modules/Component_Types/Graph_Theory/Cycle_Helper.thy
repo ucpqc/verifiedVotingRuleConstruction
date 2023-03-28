@@ -1,14 +1,15 @@
 (* Title:  Cycle_Helper.thy
    
 *)
+section \<open>Cycle Helper\<close>
 
 theory Cycle_Helper
-  imports "Graph_Theory.Digraph" 
-          "Graph_Theory.Arc_Walk" 
+  imports "Graph_Theory.Digraph"
+          "Graph_Theory.Arc_Walk"
           "../Social_Choice_Types/Profile"
-begin
+begin                                  
 
-section \<open>Additional theorems for Graphs\<close>
+text \<open>Additional theorems for Graphs\<close>
 
 type_synonym 'a Weight_Function = "'a set \<Rightarrow> 'a Profile \<Rightarrow> ('a*'a) \<Rightarrow> nat"
 
@@ -199,7 +200,7 @@ lemma less_arcs_less_cycles:
 proof (rule subsetI)
   fix x
   assume "x\<in>get_cyclical_walks H"
-  then have x_def:"path H x \<and> (length x \<le> card(verts H)) \<and> \<not>(distinct x)"
+  then have x_def:"path H x \<and> (length x \<le> card(verts H) + 1) \<and> \<not>(distinct x)"
     by simp
   then have less_paths:" path G x" 
     using less_arcs_less_paths assms
@@ -207,8 +208,8 @@ proof (rule subsetI)
   have "card (verts H) = card (verts G)"
     using assms(2)
     by metis
-  then have "(length x \<le> card(verts G))" using x_def by simp
-  then have "path G x \<and> (length x \<le> card(verts G)) \<and> \<not>(distinct x)"
+  then have "(length x \<le> card(verts G) + 1)" using x_def by simp
+  then have "path G x \<and> (length x \<le> card(verts G) + 1) \<and> \<not>(distinct x)"
     using less_paths x_def by simp
   then show "x\<in>get_cyclical_walks G" using get_cyclical_walks.simps by simp
 qed
@@ -808,9 +809,11 @@ qed
 
 
                                 
-text \<open>These currently don't get used in the implementation. 
-  WARNING: Only call get_single_cycle if you know cycle_exists G, 
-  otherwise an error will be thrown.\<close>
+text \<open>
+  These currently don't get used in the implementation. 
+  WARNING: Only call getsinglecycle if you know cycleexists G is true 
+  otherwise an error will be thrown.
+\<close>
 
 fun get_single_cycle::"('a,('a*'a)) pre_digraph \<Rightarrow> ('a*'a) awalk" where
 "get_single_cycle G = (SOME x. x \<in> get_cyclical_walks G)"
