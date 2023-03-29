@@ -397,6 +397,9 @@ proof -
     by simp
 qed
 
+(* Warning: If you want to use Isabelle build, comment out this lemma and all 
+  that follow in this theory*) 
+
 
 lemma lifted_in_arcs_min_arcs:
   assumes "(finite A \<and> w \<in> elect split_cycle A p \<and> lifted A p q w)"
